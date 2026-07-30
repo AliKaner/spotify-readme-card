@@ -30,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).send(buildTopTracksCard(withArt, theme, TITLES[timeRange]));
   } catch (error) {
+    console.error("GET /api/top-tracks failed:", error);
     res.status(200).send(errorCard());
   }
 }

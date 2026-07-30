@@ -15,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).send(buildNowPlayingCard(track, albumArt, theme));
   } catch (error) {
+    console.error("GET /api/spotify failed:", error);
     res.status(200).send(errorCard());
   }
 }
