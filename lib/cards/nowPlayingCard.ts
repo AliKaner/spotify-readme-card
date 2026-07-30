@@ -1,6 +1,7 @@
 import type { Track } from "../spotify";
 import type { Theme } from "../themes";
 import { escapeXml, truncateText } from "../text";
+import { brandFooter, cardBackdrop, thumbShadowFilter } from "./shared";
 
 const WIDTH = 480;
 const HEIGHT = 140;
@@ -18,22 +19,25 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
   const pillWidth = Math.round(statusLabel.length * 7.4 + 34);
   const eqX = CONTENT_X + pillWidth + 12;
 
+  const backdrop = cardBackdrop({
+    theme,
+    width: WIDTH,
+    height: HEIGHT,
+    radius: 18,
+    albumArt,
+    overlayStops: [
+      { offset: 0, opacity: 0.98 },
+      { offset: 0.5, opacity: 0.92 },
+      { offset: 1, opacity: 0.62 },
+    ],
+  });
+
   return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title} by ${artist} on Spotify">
   <title>${title} — ${artist}</title>
+  ${backdrop}
   <defs>
-    <clipPath id="cardClip"><rect width="${WIDTH}" height="${HEIGHT}" rx="18" /></clipPath>
     <clipPath id="artClip"><rect x="${ART_X}" y="${ART_Y}" width="${ART_SIZE}" height="${ART_SIZE}" rx="16" /></clipPath>
-    <filter id="bgBlur" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="22" />
-    </filter>
-    <filter id="thumbShadow" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000000" flood-opacity="0.4" />
-    </filter>
-    <linearGradient id="overlay" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="${theme.background}" stop-opacity="0.98" />
-      <stop offset="0.5" stop-color="${theme.background}" stop-opacity="0.92" />
-      <stop offset="1" stop-color="${theme.background}" stop-opacity="0.62" />
-    </linearGradient>
+    ${thumbShadowFilter()}
     <linearGradient id="barGrad" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0" stop-color="${theme.accent}" stop-opacity="0.55" />
       <stop offset="1" stop-color="${theme.accent}" stop-opacity="1" />
@@ -46,13 +50,6 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
       .bar { fill: url(#barGrad); }
     </style>
   </defs>
-
-  <g clip-path="url(#cardClip)">
-    <rect width="${WIDTH}" height="${HEIGHT}" fill="${theme.background}" />
-    ${albumArt ? `<image href="${albumArt}" x="-40" y="-40" width="${WIDTH + 80}" height="${HEIGHT + 80}" preserveAspectRatio="xMidYMid slice" filter="url(#bgBlur)" opacity="0.5" />` : ""}
-    <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#overlay)" />
-  </g>
-  <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${HEIGHT - 1}" rx="18" fill="none" stroke="${theme.border}" />
 
   <g filter="url(#thumbShadow)">
     ${albumArt ? `<image href="${albumArt}" x="${ART_X}" y="${ART_Y}" width="${ART_SIZE}" height="${ART_SIZE}" clip-path="url(#artClip)" preserveAspectRatio="xMidYMid slice" />`
@@ -72,10 +69,7 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
 
   <line x1="${CONTENT_X}" y1="98" x2="${CONTENT_X + 280}" y2="98" stroke="${theme.border}" stroke-opacity="0.6" />
 
-  <g transform="translate(${CONTENT_X}, 106)" opacity="0.85">
-    ${spotifyGlyph(theme.accent, theme.background)}
-    <text x="21" y="12" class="brand">SPOTIFY</text>
-  </g>
+  ${brandFooter(theme, CONTENT_X, 106)}
 </svg>`;
 }
 
@@ -101,13 +95,6 @@ function equalizer(x: number, y: number): string {
     })
     .join("");
   return `<g>${bars}</g>`;
-}
-
-function spotifyGlyph(accent: string, background: string): string {
-  return `<circle cx="8" cy="8" r="8" fill="${accent}" />
-  <path d="M4.2 6.6c2.4-.7 5.7-.55 7.9.7" stroke="${background}" stroke-width="1.1" stroke-linecap="round" fill="none" />
-  <path d="M4.2 9c2.1-.55 4.9-.45 6.9.65" stroke="${background}" stroke-width="1.1" stroke-linecap="round" fill="none" />
-  <path d="M4.5 11.3c1.7-.4 3.9-.3 5.5.6" stroke="${background}" stroke-width="1" stroke-linecap="round" fill="none" />`;
 }
 
 function buildEmptyCard(theme: Theme): string {
