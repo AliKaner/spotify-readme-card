@@ -72,26 +72,48 @@ Visit `http://localhost:3000` for a live preview, or `http://localhost:3000/api/
 
 ## API reference
 
+Every query param below is optional — omit it to get the default. Both endpoints share the same `theme` param and can be mixed and matched freely.
+
+### Themes
+
+| `theme` value | Accent | Background |
+|---|---|---|
+| `default` | `#1db954` (Spotify green) | `#191414` (near-black) |
+| `light` | `#1db954` (Spotify green) | `#ffffff` (white) |
+| `dracula` | `#ff79c6` (pink) | `#282a36` (Dracula gray) |
+| `ocean` | `#38bdf8` (sky blue) | `#0f172a` (navy) |
+| `midnight` | `#f5a623` (amber) | `#0d0d0d` (black) |
+
 ### `GET /api/spotify`
 
-Now playing, falling back to last played. Query params:
+Now playing, falling back to last played if nothing's active.
 
-| Param | Values | Default |
-|---|---|---|
-| `theme` | `default`, `light`, `dracula`, `ocean`, `midnight` | `default` |
+| Param | Values | Default | Description |
+|---|---|---|---|
+| `theme` | `default` \| `light` \| `dracula` \| `ocean` \| `midnight` | `default` | Color theme, see table above |
+
+Examples:
+
+```md
+[![Spotify](https://your-deployment.vercel.app/api/spotify)](https://your-deployment.vercel.app)
+[![Spotify](https://your-deployment.vercel.app/api/spotify?theme=dracula)](https://your-deployment.vercel.app)
+[![Spotify](https://your-deployment.vercel.app/api/spotify?theme=ocean)](https://your-deployment.vercel.app)
+```
 
 ### `GET /api/top-tracks`
 
-| Param | Values | Default |
-|---|---|---|
-| `theme` | `default`, `light`, `dracula`, `ocean`, `midnight` | `default` |
-| `time_range` | `short_term` (4 weeks), `medium_term` (6 months), `long_term` (all time) | `short_term` |
-| `limit` | `1`–`10` | `5` |
+| Param | Values | Default | Description |
+|---|---|---|---|
+| `theme` | `default` \| `light` \| `dracula` \| `ocean` \| `midnight` | `default` | Color theme, see table above |
+| `time_range` | `short_term` \| `medium_term` \| `long_term` | `short_term` | `short_term` ≈ last 4 weeks, `medium_term` ≈ last 6 months, `long_term` ≈ all time |
+| `limit` | `1`–`10` | `5` | Number of tracks shown (out-of-range values are clamped) |
 
-Example:
+Examples:
 
 ```md
+![Top Tracks](https://your-deployment.vercel.app/api/top-tracks)
 ![Top Tracks](https://your-deployment.vercel.app/api/top-tracks?theme=dracula&time_range=long_term&limit=8)
+![Top Tracks](https://your-deployment.vercel.app/api/top-tracks?theme=midnight&time_range=medium_term&limit=3)
 ```
 
 ## Why does the widget sometimes look stale?

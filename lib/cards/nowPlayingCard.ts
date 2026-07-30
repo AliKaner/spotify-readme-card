@@ -26,9 +26,9 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
     radius: 18,
     albumArt,
     overlayStops: [
-      { offset: 0, opacity: 0.98 },
-      { offset: 0.5, opacity: 0.92 },
-      { offset: 1, opacity: 0.62 },
+      { offset: 0, opacity: 0.88 },
+      { offset: 0.5, opacity: 0.72 },
+      { offset: 1, opacity: 0.32 },
     ],
   });
 

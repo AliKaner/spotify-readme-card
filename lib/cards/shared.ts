@@ -26,8 +26,9 @@ export function cardBackdrop(opts: {
   overlayStops: OverlayStop[];
   gradientDirection?: GradientDirection;
   blurStdDev?: number;
+  imageOpacity?: number;
 }): string {
-  const { theme, width, height, radius, albumArt, overlayStops, blurStdDev = 22 } = opts;
+  const { theme, width, height, radius, albumArt, overlayStops, blurStdDev = 26, imageOpacity = 0.85 } = opts;
   const dir = opts.gradientDirection ?? { x1: 0, y1: 0, x2: 1, y2: 0 };
   const stops = overlayStops
     .map((s) => `<stop offset="${s.offset}" stop-color="${theme.background}" stop-opacity="${s.opacity}" />`)
@@ -44,7 +45,7 @@ export function cardBackdrop(opts: {
   </defs>
   <g clip-path="url(#cardClip)">
     <rect width="${width}" height="${height}" fill="${theme.background}" />
-    ${albumArt ? `<image href="${albumArt}" x="-40" y="-40" width="${width + 80}" height="${height + 80}" preserveAspectRatio="xMidYMid slice" filter="url(#bgBlur)" opacity="0.5" />` : ""}
+    ${albumArt ? `<image href="${albumArt}" x="-40" y="-40" width="${width + 80}" height="${height + 80}" preserveAspectRatio="xMidYMid slice" filter="url(#bgBlur)" opacity="${imageOpacity}" />` : ""}
     <rect width="${width}" height="${height}" fill="url(#overlay)" />
   </g>
   <rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${radius}" fill="none" stroke="${theme.border}" />`;
