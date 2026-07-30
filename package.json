@@ -1,0 +1,38 @@
+{
+  "name": "spotify-readme-card",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Live, embeddable SVG cards for your GitHub profile README — shows what you're currently playing, last played, and top tracks on Spotify. Self-hosted on Vercel.",
+  "keywords": [
+    "spotify",
+    "github-readme",
+    "github-profile",
+    "spotify-widget",
+    "spotify-now-playing",
+    "readme-stats",
+    "svg-card",
+    "vercel",
+    "nextjs"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "get-refresh-token": "node scripts/get-refresh-token.js"
+  },
+  "dependencies": {
+    "next": "^16.2.12",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/react": "^19.1.0",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
