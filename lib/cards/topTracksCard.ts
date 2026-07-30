@@ -3,11 +3,17 @@ import type { Theme } from "../themes";
 import { escapeXml, truncateText } from "../text";
 import { brandFooter, cardBackdrop, thumbShadowFilter } from "./shared";
 
-const WIDTH = 480;
+const WIDTH = 330;
+const PADDING = 16;
 const ROW_HEIGHT = 56;
 const HEADER_HEIGHT = 54;
 const FOOTER_HEIGHT = 42;
 const RADIUS = 18;
+const ART_X = 48;
+const ART_SIZE = 40;
+const CONTENT_X = 96;
+const RIGHT_EDGE = WIDTH - PADDING;
+const TEXT_MAX_WIDTH = RIGHT_EDGE - CONTENT_X;
 
 export interface TopTrackWithArt {
   track: TopTrack;
@@ -20,7 +26,7 @@ export function buildTopTracksCard(tracks: TopTrackWithArt[], theme: Theme, titl
   const height = HEADER_HEIGHT + tracks.length * ROW_HEIGHT + FOOTER_HEIGHT;
   const heroArt = tracks[0]?.art ?? null;
   const pillLabel = escapeXml(title.toUpperCase());
-  const pillWidth = Math.round(pillLabel.length * 7.4 + 44);
+  const pillWidth = Math.min(Math.round(pillLabel.length * 7.4 + 44), WIDTH - PADDING * 2);
 
   const backdrop = cardBackdrop({
     theme,
@@ -38,22 +44,22 @@ export function buildTopTracksCard(tracks: TopTrackWithArt[], theme: Theme, titl
   const rows = tracks
     .map(({ track, art }, i) => {
       const y = HEADER_HEIGHT + i * ROW_HEIGHT;
-      const name = escapeXml(truncateText(track.title, 14, 260));
-      const artist = escapeXml(truncateText(track.artist, 12, 260));
+      const name = escapeXml(truncateText(track.title, 14, TEXT_MAX_WIDTH));
+      const artist = escapeXml(truncateText(track.artist, 12, TEXT_MAX_WIDTH));
       const isLast = i === tracks.length - 1;
 
       return `<g transform="translate(0, ${y})">
-    <circle cx="30" cy="28" r="14" fill="${theme.accent}" fill-opacity="0.16" />
-    <text x="30" y="32" text-anchor="middle" class="rank">${i + 1}</text>
+    <circle cx="27" cy="28" r="13" fill="${theme.accent}" fill-opacity="0.16" />
+    <text x="27" y="32" text-anchor="middle" class="rank">${i + 1}</text>
     <g filter="url(#thumbShadow)">
-      ${art ? `<clipPath id="art${i}"><rect x="56" y="8" width="40" height="40" rx="10" /></clipPath>
-      <image href="${art}" x="56" y="8" width="40" height="40" clip-path="url(#art${i})" preserveAspectRatio="xMidYMid slice" />`
-        : `<rect x="56" y="8" width="40" height="40" rx="10" fill="${theme.border}" />`}
+      ${art ? `<clipPath id="art${i}"><rect x="${ART_X}" y="8" width="${ART_SIZE}" height="${ART_SIZE}" rx="10" /></clipPath>
+      <image href="${art}" x="${ART_X}" y="8" width="${ART_SIZE}" height="${ART_SIZE}" clip-path="url(#art${i})" preserveAspectRatio="xMidYMid slice" />`
+        : `<rect x="${ART_X}" y="8" width="${ART_SIZE}" height="${ART_SIZE}" rx="10" fill="${theme.border}" />`}
     </g>
-    <rect x="56.5" y="8.5" width="39" height="39" rx="10" fill="none" stroke="${theme.accent}" stroke-opacity="0.3" />
-    <text x="108" y="24" class="track-title">${name}</text>
-    <text x="108" y="42" class="track-artist">${artist}</text>
-    ${!isLast ? `<line x1="16" y1="${ROW_HEIGHT}" x2="${WIDTH - 16}" y2="${ROW_HEIGHT}" stroke="${theme.border}" stroke-opacity="0.4" />` : ""}
+    <rect x="${ART_X + 0.5}" y="8.5" width="${ART_SIZE - 1}" height="${ART_SIZE - 1}" rx="10" fill="none" stroke="${theme.accent}" stroke-opacity="0.3" />
+    <text x="${CONTENT_X}" y="24" class="track-title">${name}</text>
+    <text x="${CONTENT_X}" y="42" class="track-artist">${artist}</text>
+    ${!isLast ? `<line x1="${PADDING}" y1="${ROW_HEIGHT}" x2="${RIGHT_EDGE}" y2="${ROW_HEIGHT}" stroke="${theme.border}" stroke-opacity="0.4" />` : ""}
   </g>`;
     })
     .join("\n  ");
@@ -74,7 +80,7 @@ export function buildTopTracksCard(tracks: TopTrackWithArt[], theme: Theme, titl
     </style>
   </defs>
 
-  <g transform="translate(16, 16)">
+  <g transform="translate(${PADDING}, 16)">
     <rect width="${pillWidth}" height="22" rx="11" fill="${theme.accent}" fill-opacity="0.16" />
     ${chartIcon(theme.accent)}
     <text x="26" y="15" class="status">${pillLabel}</text>
@@ -82,8 +88,8 @@ export function buildTopTracksCard(tracks: TopTrackWithArt[], theme: Theme, titl
 
   ${rows}
 
-  <line x1="16" y1="${footerY + 8}" x2="${WIDTH - 16}" y2="${footerY + 8}" stroke="${theme.border}" stroke-opacity="0.6" />
-  ${brandFooter(theme, 16, footerY + 16)}
+  <line x1="${PADDING}" y1="${footerY + 8}" x2="${RIGHT_EDGE}" y2="${footerY + 8}" stroke="${theme.border}" stroke-opacity="0.6" />
+  ${brandFooter(theme, PADDING, footerY + 16)}
 </svg>`;
 }
 
@@ -99,7 +105,7 @@ function buildEmptyCard(theme: Theme, title: string): string {
   const height = 100;
   return `<svg width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="No top tracks available">
   <style>
-    .msg { font: 500 14px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
+    .msg { font: 500 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
   </style>
   <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${height - 1}" rx="${RADIUS}" fill="${theme.background}" stroke="${theme.border}" />
   <text x="${WIDTH / 2}" y="${height / 2 + 5}" text-anchor="middle" class="msg">No top tracks available yet</text>

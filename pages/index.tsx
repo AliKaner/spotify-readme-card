@@ -45,7 +45,7 @@ export default function Home() {
         <section style={{ margin: "32px 0" }}>
           <h2 style={{ fontSize: 18 }}>Top Tracks</h2>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/api/top-tracks" alt="Spotify top tracks" width={480} />
+          <img src="/api/top-tracks" alt="Spotify top tracks" width={330} />
         </section>
 
         <section style={{ margin: "32px 0" }}>
