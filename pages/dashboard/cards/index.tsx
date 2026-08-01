@@ -11,6 +11,7 @@ import { Layout } from "../../../components/Layout";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button, LinkButton } from "../../../components/ui/Button";
+import { MAX_CARDS_PER_USER } from "../../../lib/limits";
 
 const SITE_URL = getSiteUrl();
 
@@ -47,10 +48,19 @@ export default function CardsList() {
       </Head>
       <Layout>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Your cards</h1>
-          <LinkButton href="/dashboard/cards/new">
-            <Plus className="h-4 w-4" /> New card
-          </LinkButton>
+          <div>
+            <h1 className="text-2xl font-semibold">Your cards</h1>
+            <p className="mt-1 font-mono text-xs text-text-muted">
+              {cards.length} / {MAX_CARDS_PER_USER} cards
+            </p>
+          </div>
+          {cards.length >= MAX_CARDS_PER_USER ? (
+            <span className="text-sm text-text-muted">Limit reached — delete a card to add another</span>
+          ) : (
+            <LinkButton href="/dashboard/cards/new">
+              <Plus className="h-4 w-4" /> New card
+            </LinkButton>
+          )}
         </div>
         <p className="mt-2 max-w-xl text-sm text-text-muted">
           Copy the snippet under a card and paste it into <code className="text-text">README.md</code> in the repo

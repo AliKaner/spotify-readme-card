@@ -35,6 +35,9 @@ export function Layout({ children }: { children: ReactNode }) {
                 <Link href="/dashboard/cards" className="text-text-muted transition hover:text-text">
                   Cards
                 </Link>
+                <Link href="/dashboard/badges" className="text-text-muted transition hover:text-text">
+                  Badges
+                </Link>
                 {user?.image && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt={user.name ?? ""} className="h-7 w-7 rounded-full" />

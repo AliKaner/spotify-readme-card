@@ -3,7 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, Music2, BarChart3, Layers, Trophy } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { authFetch } from "../../../lib/authFetch";
 import { themes } from "../../../lib/themes";
@@ -11,6 +11,7 @@ import { Layout } from "../../../components/Layout";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { SpotifySearchPicker, type PickerItem, type PickerType } from "../../../components/SpotifySearchPicker";
+import { SOCIAL_PLATFORMS } from "../../../lib/cards/socialPlatforms";
 
 type CardType =
   | "now-playing"
@@ -42,6 +43,13 @@ const FEATURED_PICKER_TYPE: Partial<Record<CardType, PickerType>> = {
 };
 
 const THEME_OPTIONS = Object.keys(themes);
+
+const PROVIDER_TABS: { id: ProviderId; label: string; icon: typeof Music2 }[] = [
+  { id: "spotify", label: "Spotify", icon: Music2 },
+  { id: "github", label: "GitHub", icon: BarChart3 },
+  { id: "custom", label: "Personal", icon: Layers },
+  { id: "achievements", label: "Achievements", icon: Trophy },
+];
 
 const TYPE_OPTIONS: { id: CardType; label: string; provider: ProviderId }[] = [
   { id: "now-playing", label: "Now Playing", provider: "spotify" },
@@ -220,12 +228,14 @@ export default function NewCard() {
   const [productPrice, setProductPrice] = useState("");
   const [productImageUrl, setProductImageUrl] = useState("");
   const [productDescription, setProductDescription] = useState("");
-  const [socialPlatform, setSocialPlatform] = useState("");
+  const [socialPlatform, setSocialPlatform] = useState("twitter");
+  const [socialOtherPlatform, setSocialOtherPlatform] = useState("");
   const [socialHandle, setSocialHandle] = useState("");
   const [socialFollowers, setSocialFollowers] = useState("");
   const [hobbyLabel, setHobbyLabel] = useState("");
   const [hobbyValue, setHobbyValue] = useState("");
   const [hobbyDescription, setHobbyDescription] = useState("");
+  const [hobbyImageUrl, setHobbyImageUrl] = useState("");
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -248,9 +258,21 @@ export default function NewCard() {
     setLayout(layoutOptionsFor(next)[0].id);
   }
 
+  function typesForProvider(providerId: ProviderId): typeof TYPE_OPTIONS {
+    return TYPE_OPTIONS.filter((t) => t.provider === providerId);
+  }
+
+  function selectProvider(providerId: ProviderId) {
+    if (providerId === currentOption.provider) return;
+    selectType(typesForProvider(providerId)[0].id);
+  }
+
   function isCustomFormReady(): boolean {
     if (type === "product") return productName.trim().length > 0;
-    if (type === "social") return socialPlatform.trim().length > 0 && socialHandle.trim().length > 0;
+    if (type === "social") {
+      const platformReady = socialPlatform !== "other" || socialOtherPlatform.trim().length > 0;
+      return platformReady && socialHandle.trim().length > 0;
+    }
     if (type === "hobby-stat") return hobbyLabel.trim().length > 0 && hobbyValue.trim().length > 0;
     if (type === "gallery") return galleryImages.some((img) => img.url.trim().length > 0);
     return true;
@@ -280,14 +302,20 @@ export default function NewCard() {
     }
     if (type === "social") {
       return {
-        platform: socialPlatform.trim(),
+        platform: socialPlatform === "other" ? socialOtherPlatform.trim() : socialPlatform,
         handle: socialHandle.trim(),
         followers: socialFollowers.trim() ? Number(socialFollowers) : undefined,
         layout,
       };
     }
     if (type === "hobby-stat") {
-      return { label: hobbyLabel.trim(), value: hobbyValue.trim(), description: hobbyDescription.trim() || undefined, layout };
+      return {
+        label: hobbyLabel.trim(),
+        value: hobbyValue.trim(),
+        description: hobbyDescription.trim() || undefined,
+        imageUrl: hobbyImageUrl.trim() || undefined,
+        layout,
+      };
     }
     return { layout };
   }
@@ -360,11 +388,13 @@ export default function NewCard() {
     productImageUrl,
     productDescription,
     socialPlatform,
+    socialOtherPlatform,
     socialHandle,
     socialFollowers,
     hobbyLabel,
     hobbyValue,
     hobbyDescription,
+    hobbyImageUrl,
   ]);
 
   useEffect(() => {
@@ -447,12 +477,33 @@ export default function NewCard() {
 
           <Card>
             <form onSubmit={handleSubmit}>
+              <div className="flex gap-2 pb-4">
+                {PROVIDER_TABS.map((tab) => {
+                  const active = tab.id === currentOption.provider;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => selectProvider(tab.id)}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                        active
+                          ? "border-accent bg-accent-soft text-accent"
+                          : "border-border text-text-muted hover:bg-surface-hover hover:text-text"
+                      }`}
+                    >
+                      <tab.icon className="h-3.5 w-3.5" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="divide-y divide-border">
                 <AttributeRow
                   label="Card type"
                   value={TYPE_OPTIONS.find((t) => t.id === type)!.label}
-                  onPrev={() => selectType(cycleId(TYPE_OPTIONS, type, -1))}
-                  onNext={() => selectType(cycleId(TYPE_OPTIONS, type, 1))}
+                  onPrev={() => selectType(cycleId(typesForProvider(currentOption.provider), type, -1))}
+                  onNext={() => selectType(cycleId(typesForProvider(currentOption.provider), type, 1))}
                 />
                 <AttributeRow
                   label="Theme"
@@ -612,14 +663,31 @@ export default function NewCard() {
                   <div className="space-y-4 py-3">
                     <label className={fieldLabelClass}>
                       Platform
-                      <input
-                        type="text"
+                      <select
                         value={socialPlatform}
                         onChange={(e) => setSocialPlatform(e.target.value)}
-                        placeholder="Twitter, Instagram, …"
                         className={inputClass}
-                      />
+                      >
+                        {SOCIAL_PLATFORMS.filter((p) => p.id !== "website").map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                        <option value="other">Other</option>
+                      </select>
                     </label>
+                    {socialPlatform === "other" && (
+                      <label className={fieldLabelClass}>
+                        Platform name
+                        <input
+                          type="text"
+                          value={socialOtherPlatform}
+                          onChange={(e) => setSocialOtherPlatform(e.target.value)}
+                          placeholder="Mastodon, Bluesky, …"
+                          className={inputClass}
+                        />
+                      </label>
+                    )}
                     <label className={fieldLabelClass}>
                       Handle
                       <input
@@ -671,6 +739,16 @@ export default function NewCard() {
                         type="text"
                         value={hobbyDescription}
                         onChange={(e) => setHobbyDescription(e.target.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Image URL (optional)
+                      <input
+                        type="url"
+                        value={hobbyImageUrl}
+                        onChange={(e) => setHobbyImageUrl(e.target.value)}
+                        placeholder="https://…"
                         className={inputClass}
                       />
                     </label>

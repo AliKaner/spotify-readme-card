@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { MAX_CARDS_PER_USER } from "../lib/limits";
 
 export const listForCurrentUser = query({
   args: {},
@@ -37,6 +38,15 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("cards")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    if (existing.length >= MAX_CARDS_PER_USER) {
+      throw new ConvexError(`You've reached the ${MAX_CARDS_PER_USER}-card limit. Delete one before creating another.`);
+    }
+
     return ctx.db.insert("cards", { userId, ...args });
   },
 });

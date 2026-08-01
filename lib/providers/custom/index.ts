@@ -40,6 +40,7 @@ const hobbyStatConfigSchema = z.object({
   label: z.string().min(1).max(30),
   value: z.string().min(1).max(24),
   description: z.string().max(60).optional(),
+  imageUrl: z.string().url().optional(),
   layout: z.enum(SINGLE_ITEM_LAYOUTS).default("full"),
 });
 
@@ -109,10 +110,11 @@ async function renderCard(args: { userId: Id<"users">; type: string; theme: Them
 
   if (args.type === "hobby-stat") {
     const parsed = hobbyStatConfigSchema.parse(args.config ?? {});
-    if (parsed.layout === "full") return buildHobbyStatCard(parsed, theme);
+    const art = await toDataUriUntrusted(parsed.imageUrl);
+    if (parsed.layout === "full") return buildHobbyStatCard(parsed, art, theme);
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,
-      { title: parsed.value, subtitle: parsed.label, art: null, statusLabel: "Hobby Stat" },
+      { title: parsed.value, subtitle: parsed.label, art, statusLabel: "Hobby Stat" },
       theme
     );
   }

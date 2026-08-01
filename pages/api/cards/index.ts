@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
+import { ConvexError } from "convex/values";
 import { getConvexSessionFromRequest } from "../../../lib/auth/convexSession";
 import { getProvider } from "../../../lib/providers/registry";
 import { themes } from "../../../lib/themes";
@@ -67,15 +68,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const cardId = await client.mutation(api.cards.create, {
-      publicId: nanoid(12),
-      provider: providerId,
-      type,
-      theme,
-      config: configParse.data,
-    });
-
-    res.status(201).json({ cardId });
+    try {
+      const cardId = await client.mutation(api.cards.create, {
+        publicId: nanoid(12),
+        provider: providerId,
+        type,
+        theme,
+        config: configParse.data,
+      });
+      res.status(201).json({ cardId });
+    } catch (error) {
+      const message = error instanceof ConvexError ? String(error.data) : "Failed to create card.";
+      res.status(400).json({ error: message });
+    }
     return;
   }
 
