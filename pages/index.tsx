@@ -1,11 +1,29 @@
 import Head from "next/head";
+import type { GetServerSideProps } from "next";
+import { getConvexSession } from "../lib/auth/convexSession";
+import { listProviders, type MarketplaceEntry } from "../lib/providers/registry";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://your-deployment.vercel.app";
-const TITLE = "Spotify README Card — Live Now Playing Widget for GitHub Profiles";
+const TITLE = "README Card Marketplace — Live Widgets for Your GitHub Profile";
 const DESCRIPTION =
-  "Free, open-source, self-hosted SVG widget that shows your current or last played Spotify track and top tracks directly in your GitHub profile README. Deploy your own in minutes on Vercel.";
+  "Connect Spotify (and more services soon), build a live SVG card from ready-made themes, and drop it straight into your GitHub profile README. Self-hosted, no third party in the middle of your data.";
 
-export default function Home() {
+interface Props {
+  isSignedIn: boolean;
+  providers: MarketplaceEntry[];
+}
+
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
+  const session = await getConvexSession(ctx.req.cookies);
+  return {
+    props: {
+      isSignedIn: Boolean(session),
+      providers: listProviders(),
+    },
+  };
+};
+
+export default function Home({ isSignedIn, providers }: Props) {
   return (
     <>
       <Head>
@@ -13,7 +31,7 @@ export default function Home() {
         <meta name="description" content={DESCRIPTION} />
         <meta
           name="keywords"
-          content="spotify github readme, spotify now playing widget, github profile spotify, spotify svg card, readme stats, github profile readme generator"
+          content="github readme widget, spotify github readme, github profile card marketplace, readme stats, self-hosted github widgets"
         />
         <link rel="canonical" href={SITE_URL} />
 
@@ -21,43 +39,61 @@ export default function Home() {
         <meta property="og:title" content={TITLE} />
         <meta property="og:description" content={DESCRIPTION} />
         <meta property="og:url" content={SITE_URL} />
-        <meta property="og:image" content={`${SITE_URL}/api/spotify`} />
 
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={TITLE} />
         <meta name="twitter:description" content={DESCRIPTION} />
-        <meta name="twitter:image" content={`${SITE_URL}/api/spotify`} />
       </Head>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <h1 style={{ fontSize: 28, marginBottom: 8 }}>🎧 Spotify README Card</h1>
-        <p style={{ color: "#b3b3b3", lineHeight: 1.6 }}>
-          A live, embeddable SVG widget that shows what you&apos;re currently (or last) playing on
-          Spotify, plus your top tracks — built to drop straight into a GitHub profile README.
+        <h1 style={{ fontSize: 28, marginBottom: 8 }}>🧩 README Card Marketplace</h1>
+        <p style={{ color: "#b3b3b3", lineHeight: 1.6, marginBottom: 24 }}>
+          Sign in with GitHub, connect the services you use, build a live SVG card from
+          ready-made themes, and get a stable link to embed in your GitHub profile README.
         </p>
 
-        <section style={{ margin: "32px 0" }}>
-          <h2 style={{ fontSize: 18 }}>Now Playing</h2>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/api/spotify" alt="Spotify now playing" width={480} height={140} />
+        <a
+          href={isSignedIn ? "/dashboard" : "/signin"}
+          style={{
+            display: "inline-block",
+            padding: "12px 22px",
+            background: "#1db954",
+            color: "#000",
+            borderRadius: 8,
+            fontWeight: 600,
+            textDecoration: "none",
+            marginBottom: 40,
+          }}
+        >
+          {isSignedIn ? "Go to dashboard" : "Sign in with GitHub"}
+        </a>
+
+        <section>
+          <h2 style={{ fontSize: 18, marginBottom: 12 }}>Integrations</h2>
+          <ul style={{ listStyle: "none", padding: 0, display: "grid", gap: 8 }}>
+            {providers.map((p) => (
+              <li
+                key={p.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
+                  border: "1px solid #2a2a2a",
+                  borderRadius: 8,
+                }}
+              >
+                <span>{p.displayName}</span>
+                <span style={{ color: p.status === "live" ? "#1db954" : "#666", fontSize: 13 }}>
+                  {p.status === "live" ? "Available" : "Coming soon"}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
 
-        <section style={{ margin: "32px 0" }}>
-          <h2 style={{ fontSize: 18 }}>Top Tracks</h2>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/api/top-tracks" alt="Spotify top tracks" width={330} />
-        </section>
-
-        <section style={{ margin: "32px 0" }}>
-          <h2 style={{ fontSize: 18 }}>Use it in your README</h2>
-          <pre>
-            <code>{`[![Spotify](${SITE_URL}/api/spotify)](${SITE_URL})`}</code>
-          </pre>
-        </section>
-
-        <p style={{ color: "#666" }}>
-          Fork it, deploy your own copy, and add your own Spotify credentials — see the{" "}
-          <code>README.md</code> in the repository for setup instructions.
+        <p style={{ color: "#666", marginTop: 40 }}>
+          Self-hosted and open source — see <code>README.md</code> in the repository for setup
+          instructions.
         </p>
       </main>
     </>

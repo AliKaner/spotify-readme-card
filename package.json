@@ -2,11 +2,12 @@
   "name": "spotify-readme-card",
   "version": "1.0.0",
   "private": false,
-  "description": "Live, embeddable SVG cards for your GitHub profile README — shows what you're currently playing, last played, and top tracks on Spotify. Self-hosted on Vercel.",
+  "description": "Multi-tenant marketplace for live, embeddable GitHub README cards — connect Spotify (and more services soon), build a card, get a shareable link. Self-hosted on Vercel.",
   "keywords": [
     "spotify",
     "github-readme",
     "github-profile",
+    "readme-marketplace",
     "spotify-widget",
     "spotify-now-playing",
     "readme-stats",
@@ -20,12 +21,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "get-refresh-token": "node scripts/get-refresh-token.js"
+    "convex:dev": "convex dev"
   },
   "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.94",
+    "convex": "^1.43.0",
+    "nanoid": "^5.1.16",
     "next": "^16.2.12",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",
