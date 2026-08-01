@@ -28,8 +28,6 @@ const FEATURED_PICKER_TYPE: Partial<Record<CardType, PickerType>> = {
   "featured-artist": "artist",
   "featured-playlist": "playlist",
 };
-type NowPlayingLayout = "full" | "compact";
-type TracksLayout = "list" | "grid";
 type TimeRangeId = "short_term" | "medium_term" | "long_term";
 
 const THEME_OPTIONS = Object.keys(themes);
@@ -46,15 +44,41 @@ const TYPE_OPTIONS: { id: CardType; label: string }[] = [
   { id: "featured-playlist", label: "Featured Playlist" },
 ];
 
-const NOW_PLAYING_LAYOUT_OPTIONS: { id: NowPlayingLayout; label: string }[] = [
+const SINGLE_ITEM_TYPES: CardType[] = ["now-playing", "featured-track", "featured-artist", "featured-playlist"];
+const RANKED_LIST_TYPES: CardType[] = ["top-tracks", "top-artists", "recently-played"];
+
+const SINGLE_ITEM_LAYOUT_OPTIONS = [
   { id: "full", label: "Full" },
+  { id: "compact", label: "Compact" },
+  { id: "terminal", label: "Terminal" },
+  { id: "badge", label: "Badge" },
+  { id: "portrait", label: "Portrait" },
+  { id: "split", label: "Split" },
+];
+
+const RANKED_LIST_LAYOUT_OPTIONS = [
+  { id: "list", label: "List" },
+  { id: "grid", label: "Grid" },
+  { id: "avatars", label: "Avatars" },
+  { id: "terminal", label: "Terminal" },
+  { id: "bars", label: "Bars" },
   { id: "compact", label: "Compact" },
 ];
 
-const TRACKS_LAYOUT_OPTIONS: { id: TracksLayout; label: string }[] = [
-  { id: "list", label: "List" },
-  { id: "grid", label: "Grid" },
+const AGGREGATE_STAT_LAYOUT_OPTIONS = [
+  { id: "bars", label: "Bars" },
+  { id: "terminal", label: "Terminal" },
+  { id: "radial", label: "Radial" },
+  { id: "badge", label: "Badge" },
+  { id: "tiles", label: "Tiles" },
+  { id: "portrait", label: "Portrait" },
 ];
+
+function layoutOptionsFor(t: CardType): { id: string; label: string }[] {
+  if (SINGLE_ITEM_TYPES.includes(t)) return SINGLE_ITEM_LAYOUT_OPTIONS;
+  if (RANKED_LIST_TYPES.includes(t)) return RANKED_LIST_LAYOUT_OPTIONS;
+  return AGGREGATE_STAT_LAYOUT_OPTIONS;
+}
 
 const TIME_RANGE_OPTIONS: { id: TimeRangeId; label: string }[] = [
   { id: "short_term", label: "Last 4 Weeks" },
@@ -125,8 +149,7 @@ export default function NewCard() {
 
   const [type, setType] = useState<CardType>("now-playing");
   const [theme, setTheme] = useState("default");
-  const [nowPlayingLayout, setNowPlayingLayout] = useState<NowPlayingLayout>("full");
-  const [tracksLayout, setTracksLayout] = useState<TracksLayout>("list");
+  const [layout, setLayout] = useState(SINGLE_ITEM_LAYOUT_OPTIONS[0].id);
   const [timeRange, setTimeRange] = useState<TimeRangeId>("short_term");
   const [limit, setLimit] = useState(5);
   const [featuredSelection, setFeaturedSelection] = useState<PickerItem | null>(null);
@@ -145,15 +168,16 @@ export default function NewCard() {
   function selectType(next: CardType) {
     setType(next);
     setFeaturedSelection(null);
+    setLayout(layoutOptionsFor(next)[0].id);
   }
 
   function buildConfig(): Record<string, unknown> {
-    if (type === "now-playing") return { layout: nowPlayingLayout };
-    if (type === "top-tracks") return { time_range: timeRange, limit, layout: tracksLayout };
-    if (type === "top-artists") return { time_range: timeRange, limit };
-    if (type === "recently-played") return { limit };
-    if (featuredPickerType) return { spotifyId: featuredSelection?.id ?? "" };
-    return { time_range: timeRange };
+    if (featuredPickerType) return { spotifyId: featuredSelection?.id ?? "", layout };
+    if (type === "now-playing") return { layout };
+    if (type === "top-tracks") return { time_range: timeRange, limit, layout };
+    if (type === "top-artists") return { time_range: timeRange, limit, layout };
+    if (type === "recently-played") return { limit, layout };
+    return { time_range: timeRange, layout };
   }
 
   // Live preview: debounced fetch of the SVG for the current (unsaved) form state,
@@ -198,7 +222,7 @@ export default function NewCard() {
 
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection, token, type, theme, nowPlayingLayout, tracksLayout, timeRange, limit, featuredSelection]);
+  }, [connection, token, type, theme, layout, timeRange, limit, featuredSelection]);
 
   useEffect(() => {
     return () => {
@@ -292,23 +316,12 @@ export default function NewCard() {
                   onNext={() => setTheme(cycleValue(THEME_OPTIONS, theme, 1))}
                 />
 
-                {type === "now-playing" && (
-                  <AttributeRow
-                    label="Layout"
-                    value={NOW_PLAYING_LAYOUT_OPTIONS.find((l) => l.id === nowPlayingLayout)!.label}
-                    onPrev={() => setNowPlayingLayout(cycleId(NOW_PLAYING_LAYOUT_OPTIONS, nowPlayingLayout, -1))}
-                    onNext={() => setNowPlayingLayout(cycleId(NOW_PLAYING_LAYOUT_OPTIONS, nowPlayingLayout, 1))}
-                  />
-                )}
-
-                {type === "top-tracks" && (
-                  <AttributeRow
-                    label="Layout"
-                    value={TRACKS_LAYOUT_OPTIONS.find((l) => l.id === tracksLayout)!.label}
-                    onPrev={() => setTracksLayout(cycleId(TRACKS_LAYOUT_OPTIONS, tracksLayout, -1))}
-                    onNext={() => setTracksLayout(cycleId(TRACKS_LAYOUT_OPTIONS, tracksLayout, 1))}
-                  />
-                )}
+                <AttributeRow
+                  label="Layout"
+                  value={layoutOptionsFor(type).find((l) => l.id === layout)?.label ?? layout}
+                  onPrev={() => setLayout(cycleId(layoutOptionsFor(type), layout, -1))}
+                  onNext={() => setLayout(cycleId(layoutOptionsFor(type), layout, 1))}
+                />
 
                 {featuredPickerType && (
                   <div className="py-3">

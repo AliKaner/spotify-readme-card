@@ -15,7 +15,7 @@ import {
   type TimeRange,
 } from "../../spotify";
 import { toDataUri } from "../../image";
-import { buildNowPlayingCard, buildNowPlayingCompactCard } from "../../cards/nowPlayingCard";
+import { buildNowPlayingCard } from "../../cards/nowPlayingCard";
 import { buildTopTracksCard, buildTopTracksGridCard, type TopTrackWithArt } from "../../cards/topTracksCard";
 import { buildTopArtistsCard, type TopArtistWithArt } from "../../cards/topArtistsCard";
 import { buildRecentlyPlayedCard, type RecentTrackWithArt } from "../../cards/recentlyPlayedCard";
@@ -24,37 +24,51 @@ import { buildSonicProfileCard } from "../../cards/sonicProfileCard";
 import { buildFeaturedTrackCard } from "../../cards/featuredTrackCard";
 import { buildFeaturedArtistCard } from "../../cards/featuredArtistCard";
 import { buildFeaturedPlaylistCard } from "../../cards/featuredPlaylistCard";
+import { renderSingleItemLayout, emptySingleItemCard, type SingleItemGenericLayout } from "../../cards/layouts/singleItem";
+import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../cards/layouts/rankedList";
+import { renderAggregateStatLayout, type AggregateStatGenericLayout } from "../../cards/layouts/aggregateStat";
 import type { CardTypeDef, Provider } from "../types";
 
+const SINGLE_ITEM_LAYOUTS = ["full", "compact", "terminal", "badge", "portrait", "split"] as const;
+// Shared by top-tracks/top-artists/recently-played — "grid" is a bespoke renderer for
+// top-tracks and falls through to the generic grid layout for the other two (see renderCard).
+const RANKED_LIST_LAYOUTS = ["list", "grid", "avatars", "terminal", "bars", "compact"] as const;
+const AGGREGATE_STAT_LAYOUTS = ["bars", "terminal", "radial", "badge", "tiles", "portrait"] as const;
+
 const nowPlayingConfigSchema = z.object({
-  layout: z.enum(["full", "compact"]).default("full"),
+  layout: z.enum(SINGLE_ITEM_LAYOUTS).default("full"),
 });
 
 const topTracksConfigSchema = z.object({
   time_range: z.enum(["short_term", "medium_term", "long_term"]).default("short_term"),
   limit: z.number().int().min(1).max(10).default(5),
-  layout: z.enum(["list", "grid"]).default("list"),
+  layout: z.enum(RANKED_LIST_LAYOUTS).default("list"),
 });
 
 const topArtistsConfigSchema = z.object({
   time_range: z.enum(["short_term", "medium_term", "long_term"]).default("short_term"),
   limit: z.number().int().min(1).max(10).default(5),
+  layout: z.enum(RANKED_LIST_LAYOUTS).default("list"),
 });
 
 const recentlyPlayedConfigSchema = z.object({
   limit: z.number().int().min(1).max(10).default(5),
+  layout: z.enum(RANKED_LIST_LAYOUTS).default("list"),
 });
 
 const topGenresConfigSchema = z.object({
   time_range: z.enum(["short_term", "medium_term", "long_term"]).default("short_term"),
+  layout: z.enum(AGGREGATE_STAT_LAYOUTS).default("bars"),
 });
 
 const sonicProfileConfigSchema = z.object({
   time_range: z.enum(["short_term", "medium_term", "long_term"]).default("short_term"),
+  layout: z.enum(AGGREGATE_STAT_LAYOUTS).default("bars"),
 });
 
 const featuredIdConfigSchema = z.object({
   spotifyId: z.string().min(1),
+  layout: z.enum(SINGLE_ITEM_LAYOUTS).default("full"),
 });
 
 const TOP_TRACKS_TITLES: Record<TimeRange, string> = {
@@ -70,12 +84,7 @@ const TOP_ARTISTS_TITLES: Record<TimeRange, string> = {
 };
 
 export const spotifyCardTypes: CardTypeDef[] = [
-  {
-    id: "now-playing",
-    label: "Now Playing",
-    configSchema: nowPlayingConfigSchema,
-    defaultConfig: { layout: "full" },
-  },
+  { id: "now-playing", label: "Now Playing", configSchema: nowPlayingConfigSchema, defaultConfig: { layout: "full" } },
   {
     id: "top-tracks",
     label: "Top Tracks",
@@ -86,43 +95,43 @@ export const spotifyCardTypes: CardTypeDef[] = [
     id: "top-artists",
     label: "Top Artists",
     configSchema: topArtistsConfigSchema,
-    defaultConfig: { time_range: "short_term", limit: 5 },
+    defaultConfig: { time_range: "short_term", limit: 5, layout: "list" },
   },
   {
     id: "recently-played",
     label: "Recently Played",
     configSchema: recentlyPlayedConfigSchema,
-    defaultConfig: { limit: 5 },
+    defaultConfig: { limit: 5, layout: "list" },
   },
   {
     id: "top-genres",
     label: "Top Genres",
     configSchema: topGenresConfigSchema,
-    defaultConfig: { time_range: "short_term" },
+    defaultConfig: { time_range: "short_term", layout: "bars" },
   },
   {
     id: "sonic-profile",
     label: "Sonic Profile",
     configSchema: sonicProfileConfigSchema,
-    defaultConfig: { time_range: "short_term" },
+    defaultConfig: { time_range: "short_term", layout: "bars" },
   },
   {
     id: "featured-track",
     label: "Featured Track",
     configSchema: featuredIdConfigSchema,
-    defaultConfig: { spotifyId: "" },
+    defaultConfig: { spotifyId: "", layout: "full" },
   },
   {
     id: "featured-artist",
     label: "Featured Artist",
     configSchema: featuredIdConfigSchema,
-    defaultConfig: { spotifyId: "" },
+    defaultConfig: { spotifyId: "", layout: "full" },
   },
   {
     id: "featured-playlist",
     label: "Featured Playlist",
     configSchema: featuredIdConfigSchema,
-    defaultConfig: { spotifyId: "" },
+    defaultConfig: { spotifyId: "", layout: "full" },
   },
 ];
 
@@ -133,14 +142,19 @@ async function renderCard(args: {
   config: unknown;
 }): Promise<string> {
   const accessToken = await getValidSpotifyAccessToken(args.connection);
+  const theme = args.theme;
 
   if (args.type === "now-playing") {
     const parsed = nowPlayingConfigSchema.parse(args.config ?? {});
     const track = await getNowPlaying(accessToken);
     const albumArt = track ? await toDataUri(track.albumImageUrl) : null;
-    return parsed.layout === "compact"
-      ? buildNowPlayingCompactCard(track, albumArt, args.theme)
-      : buildNowPlayingCard(track, albumArt, args.theme);
+    if (parsed.layout === "full") return buildNowPlayingCard(track, albumArt, theme);
+    if (!track) return emptySingleItemCard(theme, "No recent Spotify activity");
+    return renderSingleItemLayout(
+      parsed.layout as SingleItemGenericLayout,
+      { title: track.title, subtitle: track.artist, art: albumArt, statusLabel: track.isPlaying ? "Now Playing" : "Last Played" },
+      theme
+    );
   }
 
   if (args.type === "top-tracks") {
@@ -149,9 +163,11 @@ async function renderCard(args: {
     const withArt: TopTrackWithArt[] = await Promise.all(
       tracks.map(async (track) => ({ track, art: await toDataUri(track.albumImageUrl) }))
     );
-    return parsed.layout === "grid"
-      ? buildTopTracksGridCard(withArt, args.theme, TOP_TRACKS_TITLES[parsed.time_range])
-      : buildTopTracksCard(withArt, args.theme, TOP_TRACKS_TITLES[parsed.time_range]);
+    const title = TOP_TRACKS_TITLES[parsed.time_range];
+    if (parsed.layout === "list") return buildTopTracksCard(withArt, theme, title);
+    if (parsed.layout === "grid") return buildTopTracksGridCard(withArt, theme, title);
+    const items: RankedItem[] = withArt.map(({ track, art }) => ({ title: track.title, subtitle: track.artist, art }));
+    return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, theme, title);
   }
 
   if (args.type === "top-artists") {
@@ -160,7 +176,10 @@ async function renderCard(args: {
     const withArt: TopArtistWithArt[] = await Promise.all(
       artists.map(async (artist) => ({ artist, art: await toDataUri(artist.imageUrl) }))
     );
-    return buildTopArtistsCard(withArt, args.theme, TOP_ARTISTS_TITLES[parsed.time_range]);
+    const title = TOP_ARTISTS_TITLES[parsed.time_range];
+    if (parsed.layout === "list") return buildTopArtistsCard(withArt, theme, title);
+    const items: RankedItem[] = withArt.map(({ artist, art }) => ({ title: artist.name, subtitle: artist.genre, art }));
+    return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, theme, title);
   }
 
   if (args.type === "recently-played") {
@@ -169,14 +188,19 @@ async function renderCard(args: {
     const withArt: RecentTrackWithArt[] = await Promise.all(
       tracks.map(async (track) => ({ track, art: await toDataUri(track.albumImageUrl) }))
     );
-    return buildRecentlyPlayedCard(withArt, args.theme);
+    if (parsed.layout === "list") return buildRecentlyPlayedCard(withArt, theme);
+    const items: RankedItem[] = withArt.map(({ track, art }) => ({ title: track.title, subtitle: track.artist, art }));
+    return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, theme, "Recently Played");
   }
 
   if (args.type === "top-genres") {
     const parsed = topGenresConfigSchema.parse(args.config ?? {});
     const artists = await getTopArtists(accessToken, parsed.time_range, 50);
     const genres = computeTopGenres(artists, 5);
-    return buildTopGenresCard(genres, args.theme);
+    if (parsed.layout === "bars") return buildTopGenresCard(genres, theme);
+    const maxCount = Math.max(1, ...genres.map((g) => g.count));
+    const metrics = genres.map((g) => ({ label: g.genre, value: g.count / maxCount }));
+    return renderAggregateStatLayout(parsed.layout as AggregateStatGenericLayout, { metrics }, theme, "Top Genres");
   }
 
   if (args.type === "sonic-profile") {
@@ -186,28 +210,55 @@ async function renderCard(args: {
       accessToken,
       tracks.map((t) => t.id)
     );
-    return buildSonicProfileCard(features, args.theme);
+    if (parsed.layout === "bars") return buildSonicProfileCard(features, theme);
+    const metrics = features
+      ? [
+          { label: "energy", value: features.energy },
+          { label: "danceability", value: features.danceability },
+          { label: "positivity", value: features.valence },
+        ]
+      : [];
+    const statNumber = features ? { value: features.tempo, label: "BPM AVG TEMPO" } : undefined;
+    return renderAggregateStatLayout(parsed.layout as AggregateStatGenericLayout, { metrics, statNumber }, theme, "Sonic Profile");
   }
 
   if (args.type === "featured-track") {
     const parsed = featuredIdConfigSchema.parse(args.config ?? {});
     const track = await getTrackById(accessToken, parsed.spotifyId);
     const albumArt = track ? await toDataUri(track.albumImageUrl) : null;
-    return buildFeaturedTrackCard(track, albumArt, args.theme);
+    if (parsed.layout === "full") return buildFeaturedTrackCard(track, albumArt, theme);
+    if (!track) return emptySingleItemCard(theme, "Track not found");
+    return renderSingleItemLayout(
+      parsed.layout as SingleItemGenericLayout,
+      { title: track.title, subtitle: track.artist, art: albumArt, statusLabel: "Featured Track" },
+      theme
+    );
   }
 
   if (args.type === "featured-artist") {
     const parsed = featuredIdConfigSchema.parse(args.config ?? {});
     const artist = await getArtistById(accessToken, parsed.spotifyId);
     const art = artist ? await toDataUri(artist.imageUrl) : null;
-    return buildFeaturedArtistCard(artist, art, args.theme);
+    if (parsed.layout === "full") return buildFeaturedArtistCard(artist, art, theme);
+    if (!artist) return emptySingleItemCard(theme, "Artist not found");
+    return renderSingleItemLayout(
+      parsed.layout as SingleItemGenericLayout,
+      { title: artist.name, subtitle: artist.genres[0] ?? "Artist", art, statusLabel: "Featured Artist" },
+      theme
+    );
   }
 
   if (args.type === "featured-playlist") {
     const parsed = featuredIdConfigSchema.parse(args.config ?? {});
     const playlist = await getPlaylistById(accessToken, parsed.spotifyId);
     const art = playlist ? await toDataUri(playlist.imageUrl) : null;
-    return buildFeaturedPlaylistCard(playlist, art, args.theme);
+    if (parsed.layout === "full") return buildFeaturedPlaylistCard(playlist, art, theme);
+    if (!playlist) return emptySingleItemCard(theme, "Playlist not found");
+    return renderSingleItemLayout(
+      parsed.layout as SingleItemGenericLayout,
+      { title: playlist.name, subtitle: `${playlist.trackCount} tracks`, art, statusLabel: "Featured Playlist" },
+      theme
+    );
   }
 
   throw new Error(`Unknown Spotify card type: ${args.type}`);

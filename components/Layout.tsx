@@ -20,7 +20,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border">
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-bg/75 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center">
             <Logo />
