@@ -93,6 +93,86 @@ export function buildTopTracksCard(tracks: TopTrackWithArt[], theme: Theme, titl
 </svg>`;
 }
 
+const GRID_COLUMNS = 3;
+const GRID_GAP = 12;
+const GRID_HEADER_HEIGHT = 46;
+const GRID_FOOTER_HEIGHT = 38;
+const GRID_LABEL_HEIGHT = 22;
+
+export function buildTopTracksGridCard(tracks: TopTrackWithArt[], theme: Theme, title = "Top Tracks"): string {
+  if (tracks.length === 0) return buildEmptyCard(theme, title);
+
+  const columns = Math.min(GRID_COLUMNS, tracks.length);
+  const rows = Math.ceil(tracks.length / columns);
+  const cellSize = (WIDTH - PADDING * 2 - GRID_GAP * (columns - 1)) / columns;
+  const cellHeight = cellSize + 6 + GRID_LABEL_HEIGHT;
+  const gridHeight = rows * cellHeight + (rows - 1) * GRID_GAP;
+  const height = GRID_HEADER_HEIGHT + gridHeight + GRID_FOOTER_HEIGHT;
+
+  const heroArt = tracks[0]?.art ?? null;
+  const pillLabel = escapeXml(title.toUpperCase());
+  const pillWidth = Math.min(Math.round(pillLabel.length * 7.4 + 44), WIDTH - PADDING * 2);
+
+  const backdrop = cardBackdrop({
+    theme,
+    width: WIDTH,
+    height,
+    radius: RADIUS,
+    albumArt: heroArt,
+    overlayStops: [
+      { offset: 0, opacity: 0.85 },
+      { offset: 1, opacity: 0.95 },
+    ],
+    gradientDirection: { x1: 0, y1: 0, x2: 0, y2: 1 },
+  });
+
+  const cells = tracks
+    .map(({ track, art }, i) => {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      const x = PADDING + col * (cellSize + GRID_GAP);
+      const y = GRID_HEADER_HEIGHT + row * (cellHeight + GRID_GAP);
+      const name = escapeXml(truncateText(track.title, 13, cellSize));
+
+      return `<g transform="translate(${x}, ${y})">
+    <g filter="url(#thumbShadow)">
+      ${art ? `<clipPath id="grid-art${i}"><rect width="${cellSize}" height="${cellSize}" rx="10" /></clipPath>
+      <image href="${art}" width="${cellSize}" height="${cellSize}" clip-path="url(#grid-art${i})" preserveAspectRatio="xMidYMid slice" />`
+        : `<rect width="${cellSize}" height="${cellSize}" rx="10" fill="${theme.border}" />`}
+    </g>
+    <rect x="0.5" y="0.5" width="${cellSize - 1}" height="${cellSize - 1}" rx="10" fill="none" stroke="${theme.accent}" stroke-opacity="0.3" />
+    <text x="${cellSize / 2}" y="${cellSize + 18}" text-anchor="middle" class="grid-title">${name}</text>
+  </g>`;
+    })
+    .join("\n  ");
+
+  const footerY = GRID_HEADER_HEIGHT + gridHeight;
+
+  return `<svg width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}">
+  <title>${escapeXml(title)}</title>
+  ${backdrop}
+  <defs>
+    ${thumbShadowFilter()}
+    <style>
+      .status { font: 700 10px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.accent}; letter-spacing: 1.4px; }
+      .grid-title { font: 500 11px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
+      .brand { font: 600 10px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; letter-spacing: 1.2px; }
+    </style>
+  </defs>
+
+  <g transform="translate(${PADDING}, 16)">
+    <rect width="${pillWidth}" height="22" rx="11" fill="${theme.accent}" fill-opacity="0.16" />
+    ${chartIcon(theme.accent)}
+    <text x="26" y="15" class="status">${pillLabel}</text>
+  </g>
+
+  ${cells}
+
+  <line x1="${PADDING}" y1="${footerY + 8}" x2="${RIGHT_EDGE}" y2="${footerY + 8}" stroke="${theme.border}" stroke-opacity="0.6" />
+  ${brandFooter(theme, PADDING, footerY + 16)}
+</svg>`;
+}
+
 function chartIcon(accent: string): string {
   return `<g transform="translate(11, 6)">
     <rect x="0" y="6" width="3" height="4" rx="1" fill="${accent}" />

@@ -104,7 +104,7 @@ export function buildNowPlayingCompactCard(track: Track | null, albumArt: string
   </g>
   <rect x="${COMPACT_ART_X + 0.5}" y="${artY + 0.5}" width="${COMPACT_ART_SIZE - 1}" height="${COMPACT_ART_SIZE - 1}" rx="10" fill="none" stroke="${theme.accent}" stroke-opacity="0.35" />
 
-  ${statusDot(theme, track.isPlaying, COMPACT_CONTENT_X - 12, COMPACT_HEIGHT / 2 - 12)}
+  ${statusDot(theme, track.isPlaying, COMPACT_CONTENT_X - 10, 22)}
   <text x="${COMPACT_CONTENT_X}" y="27" class="ctitle">${title}</text>
   <text x="${COMPACT_CONTENT_X}" y="44" class="cartist">${artist}</text>
 
@@ -116,9 +116,9 @@ export function buildNowPlayingCompactCard(track: Track | null, albumArt: string
 
 function statusDot(theme: Theme, isPlaying: boolean, x = 10, y = 11): string {
   if (!isPlaying) {
-    return `<circle cx="10" cy="11" r="3" fill="${theme.secondaryText}" />`;
+    return `<circle cx="${x}" cy="${y}" r="3" fill="${theme.secondaryText}" />`;
   }
-  return `<circle cx="10" cy="11" r="3" fill="${theme.accent}">
+  return `<circle cx="${x}" cy="${y}" r="3" fill="${theme.accent}">
     <animate attributeName="opacity" values="1;0.35;1" dur="1.6s" repeatCount="indefinite" />
   </circle>`;
 }
@@ -138,12 +138,12 @@ function equalizer(x: number, y: number): string {
   return `<g>${bars}</g>`;
 }
 
-function buildEmptyCard(theme: Theme): string {
-  return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="No recent Spotify activity">
+function buildEmptyCard(theme: Theme, height: number = HEIGHT): string {
+  return `<svg width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="No recent Spotify activity">
   <style>
-    .msg { font: 500 14px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
+    .msg { font: 500 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
   </style>
-  <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${HEIGHT - 1}" rx="18" fill="${theme.background}" stroke="${theme.border}" />
-  <text x="${WIDTH / 2}" y="${HEIGHT / 2 + 5}" text-anchor="middle" class="msg">No recent Spotify activity</text>
+  <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${height - 1}" rx="14" fill="${theme.background}" stroke="${theme.border}" />
+  <text x="${WIDTH / 2}" y="${height / 2 + 5}" text-anchor="middle" class="msg">No recent Spotify activity</text>
 </svg>`;
 }

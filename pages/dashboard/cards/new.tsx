@@ -11,14 +11,30 @@ import { Layout } from "../../../components/Layout";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 
+type CardType = "now-playing" | "top-tracks" | "top-artists";
+type NowPlayingLayout = "full" | "compact";
+type TracksLayout = "list" | "grid";
+type TimeRangeId = "short_term" | "medium_term" | "long_term";
+
 const THEME_OPTIONS = Object.keys(themes);
 
-const TYPE_OPTIONS: { id: "now-playing" | "top-tracks"; label: string }[] = [
+const TYPE_OPTIONS: { id: CardType; label: string }[] = [
   { id: "now-playing", label: "Now Playing" },
   { id: "top-tracks", label: "Top Tracks" },
+  { id: "top-artists", label: "Top Artists" },
 ];
 
-const TIME_RANGE_OPTIONS: { id: "short_term" | "medium_term" | "long_term"; label: string }[] = [
+const NOW_PLAYING_LAYOUT_OPTIONS: { id: NowPlayingLayout; label: string }[] = [
+  { id: "full", label: "Full" },
+  { id: "compact", label: "Compact" },
+];
+
+const TRACKS_LAYOUT_OPTIONS: { id: TracksLayout; label: string }[] = [
+  { id: "list", label: "List" },
+  { id: "grid", label: "Grid" },
+];
+
+const TIME_RANGE_OPTIONS: { id: TimeRangeId; label: string }[] = [
   { id: "short_term", label: "Last 4 Weeks" },
   { id: "medium_term", label: "Last 6 Months" },
   { id: "long_term", label: "All Time" },
@@ -85,9 +101,11 @@ export default function NewCard() {
 
   const connection = useQuery(api.connections.getForCurrentUser, isLoading ? "skip" : { provider: "spotify" });
 
-  const [type, setType] = useState<"now-playing" | "top-tracks">("now-playing");
+  const [type, setType] = useState<CardType>("now-playing");
   const [theme, setTheme] = useState("default");
-  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("short_term");
+  const [nowPlayingLayout, setNowPlayingLayout] = useState<NowPlayingLayout>("full");
+  const [tracksLayout, setTracksLayout] = useState<TracksLayout>("list");
+  const [timeRange, setTimeRange] = useState<TimeRangeId>("short_term");
   const [limit, setLimit] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,13 +115,21 @@ export default function NewCard() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
+  const showRanking = type === "top-tracks" || type === "top-artists";
+
+  function buildConfig(): Record<string, unknown> {
+    if (type === "now-playing") return { layout: nowPlayingLayout };
+    if (type === "top-tracks") return { time_range: timeRange, limit, layout: tracksLayout };
+    return { time_range: timeRange, limit };
+  }
+
   // Live preview: debounced fetch of the SVG for the current (unsaved) form state,
   // rendered via a blob URL so we can attach the auth token without exposing it in an
   // <img src> URL.
   useEffect(() => {
     if (!connection || !token) return;
 
-    const config = type === "top-tracks" ? { time_range: timeRange, limit } : {};
+    const config = buildConfig();
     const timeout = setTimeout(async () => {
       setPreviewLoading(true);
       setPreviewError(null);
@@ -133,7 +159,8 @@ export default function NewCard() {
     }, 450);
 
     return () => clearTimeout(timeout);
-  }, [connection, token, type, theme, timeRange, limit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection, token, type, theme, nowPlayingLayout, tracksLayout, timeRange, limit]);
 
   useEffect(() => {
     return () => {
@@ -168,12 +195,10 @@ export default function NewCard() {
     setSubmitting(true);
     setError(null);
 
-    const config = type === "top-tracks" ? { time_range: timeRange, limit } : {};
-
     const response = await authFetch(token, "/api/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: "spotify", type, theme, config }),
+      body: JSON.stringify({ provider: "spotify", type, theme, config: buildConfig() }),
     });
 
     if (!response.ok) {
@@ -227,7 +252,25 @@ export default function NewCard() {
                   onNext={() => setTheme(cycleValue(THEME_OPTIONS, theme, 1))}
                 />
 
+                {type === "now-playing" && (
+                  <AttributeRow
+                    label="Layout"
+                    value={NOW_PLAYING_LAYOUT_OPTIONS.find((l) => l.id === nowPlayingLayout)!.label}
+                    onPrev={() => setNowPlayingLayout(cycleId(NOW_PLAYING_LAYOUT_OPTIONS, nowPlayingLayout, -1))}
+                    onNext={() => setNowPlayingLayout(cycleId(NOW_PLAYING_LAYOUT_OPTIONS, nowPlayingLayout, 1))}
+                  />
+                )}
+
                 {type === "top-tracks" && (
+                  <AttributeRow
+                    label="Layout"
+                    value={TRACKS_LAYOUT_OPTIONS.find((l) => l.id === tracksLayout)!.label}
+                    onPrev={() => setTracksLayout(cycleId(TRACKS_LAYOUT_OPTIONS, tracksLayout, -1))}
+                    onNext={() => setTracksLayout(cycleId(TRACKS_LAYOUT_OPTIONS, tracksLayout, 1))}
+                  />
+                )}
+
+                {showRanking && (
                   <>
                     <AttributeRow
                       label="Time range"
@@ -236,12 +279,14 @@ export default function NewCard() {
                       onNext={() => setTimeRange(cycleId(TIME_RANGE_OPTIONS, timeRange, 1))}
                     />
                     <div className="flex items-center justify-between py-3">
-                      <span className="text-sm text-text-muted">Number of tracks</span>
+                      <span className="text-sm text-text-muted">
+                        {type === "top-artists" ? "Number of artists" : "Number of tracks"}
+                      </span>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => setLimit((n) => Math.max(1, n - 1))}
-                          aria-label="Fewer tracks"
+                          aria-label="Fewer"
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
                         >
                           <Minus className="h-4 w-4" />
@@ -250,7 +295,7 @@ export default function NewCard() {
                         <button
                           type="button"
                           onClick={() => setLimit((n) => Math.min(10, n + 1))}
-                          aria-label="More tracks"
+                          aria-label="More"
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
                         >
                           <Plus className="h-4 w-4" />
