@@ -17,11 +17,16 @@ import type { GithubProfile, GithubRepo } from "../../lib/github";
 import { buildGithubStatsCard } from "../../lib/cards/githubStatsCard";
 import { buildGithubTradingCard } from "../../lib/cards/githubTradingCard";
 import { buildGithubRpgSheetCard } from "../../lib/cards/githubRpgSheetCard";
+import { buildGithubRpgScrollCard } from "../../lib/cards/githubRpgScrollCard";
 import { buildGithubReportCard } from "../../lib/cards/githubReportCard";
+import { buildGithubDiplomaCard } from "../../lib/cards/githubDiplomaCard";
 import { buildRepoContributionsCard, type RepoContributionsData } from "../../lib/cards/repoContributionsCard";
 import { buildRepoPassportCard } from "../../lib/cards/repoPassportCard";
 import { buildRepoWantedPosterCard } from "../../lib/cards/repoWantedPosterCard";
+import { buildRepoLineupCard } from "../../lib/cards/repoLineupCard";
+import { buildRepoMembershipCard } from "../../lib/cards/repoMembershipCard";
 import { buildGenresBoardingPassCard } from "../../lib/cards/genresBoardingPassCard";
+import { buildGenresLuggageTagCard } from "../../lib/cards/genresLuggageTagCard";
 
 // Self-contained gradient "album art" — no external image dependency, so the landing
 // page's demo never breaks on a dead hotlink. Rendered through the exact same card
@@ -206,6 +211,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       res.status(200).send(buildGenresBoardingPassCard(genres, theme));
       return;
     }
+    if (layout === "luggage-tag") {
+      res.status(200).send(buildGenresLuggageTagCard(genres, theme));
+      return;
+    }
     const maxCount = Math.max(1, ...genres.map((g) => g.count));
     const metrics = genres.map((g) => ({ label: g.genre, value: g.count / maxCount }));
     res.status(200).send(renderAggregateStatLayout(layout as AggregateStatGenericLayout, { metrics }, theme, "Top Genres"));
@@ -247,8 +256,16 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       res.status(200).send(buildGithubRpgSheetCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS, avatar, theme));
       return;
     }
+    if (layout === "rpg-scroll") {
+      res.status(200).send(buildGithubRpgScrollCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS));
+      return;
+    }
     if (layout === "report-card") {
       res.status(200).send(buildGithubReportCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS, avatar, theme));
+      return;
+    }
+    if (layout === "diploma") {
+      res.status(200).send(buildGithubDiplomaCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS));
       return;
     }
     const years = Math.max(0, (Date.now() - new Date(DEMO_GITHUB_PROFILE.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000));
@@ -280,6 +297,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
     if (layout === "wanted-poster") {
       res.status(200).send(buildRepoWantedPosterCard(DEMO_REPO_CONTRIBUTIONS, avatar, DEMO_GITHUB_PROFILE.login));
+      return;
+    }
+    if (layout === "lineup") {
+      res.status(200).send(buildRepoLineupCard(DEMO_REPO_CONTRIBUTIONS, avatar, DEMO_GITHUB_PROFILE.login));
+      return;
+    }
+    if (layout === "membership") {
+      res.status(200).send(buildRepoMembershipCard(DEMO_REPO_CONTRIBUTIONS, DEMO_GITHUB_PROFILE.login, theme));
       return;
     }
     res.status(200).send(

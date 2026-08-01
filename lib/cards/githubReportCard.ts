@@ -1,6 +1,7 @@
 import type { Theme } from "../themes";
 import { escapeXml, truncateText } from "../text";
 import { appGlyph, thumbShadowFilter } from "./shared";
+import { computeReportCardStats, gradeColor } from "./reportCardStats";
 import type { GithubProfile, GithubRepo } from "../github";
 
 const WIDTH = 340;
@@ -12,39 +13,8 @@ const GPA_HEIGHT = 46;
 const COMMENT_HEIGHT = 52;
 const FOOTER_HEIGHT = 36;
 
-interface Grade {
-  letter: string;
-  points: number;
-}
-
-function gradeFor(normalized: number): Grade {
-  const v = Math.min(Math.max(normalized, 0), 1);
-  if (v >= 0.97) return { letter: "A+", points: 4.3 };
-  if (v >= 0.93) return { letter: "A", points: 4.0 };
-  if (v >= 0.9) return { letter: "A-", points: 3.7 };
-  if (v >= 0.87) return { letter: "B+", points: 3.3 };
-  if (v >= 0.8) return { letter: "B", points: 3.0 };
-  if (v >= 0.7) return { letter: "B-", points: 2.7 };
-  if (v >= 0.6) return { letter: "C+", points: 2.3 };
-  if (v >= 0.5) return { letter: "C", points: 2.0 };
-  if (v >= 0.35) return { letter: "D", points: 1.0 };
-  return { letter: "F", points: 0 };
-}
-
 export function buildGithubReportCard(profile: GithubProfile, repos: GithubRepo[], avatar: string | null, theme: Theme): string {
-  const totalStars = repos.reduce((sum, r) => sum + (r.isFork ? 0 : r.stars), 0);
-  const languageCount = new Set(repos.filter((r) => !r.isFork && r.language).map((r) => r.language)).size;
-  const accountAgeYears = Math.max(0, (Date.now() - new Date(profile.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000));
-
-  const subjects = [
-    { label: "OPEN SOURCE OUTPUT", grade: gradeFor(profile.publicRepos / 150) },
-    { label: "COMMUNITY STANDING", grade: gradeFor(profile.followers / 500) },
-    { label: "CODE QUALITY", grade: gradeFor(totalStars / 300) },
-    { label: "LANGUAGE STUDIES", grade: gradeFor(languageCount / 8) },
-    { label: "CONSISTENCY", grade: gradeFor(accountAgeYears / 8) },
-  ];
-
-  const gpa = subjects.reduce((sum, s) => sum + s.grade.points, 0) / subjects.length;
+  const { subjects, gpa } = computeReportCardStats(profile, repos);
   const comment =
     gpa >= 3.7
       ? "Outstanding work — a model contributor to the class."
@@ -63,7 +33,7 @@ export function buildGithubReportCard(profile: GithubProfile, repos: GithubRepo[
       const y = rowsY + i * ROW_HEIGHT;
       return `<g transform="translate(0, ${y})">
     <text x="${PADDING}" y="20" class="subject">${s.label}</text>
-    <text x="${WIDTH - PADDING}" y="20" text-anchor="end" class="grade">${s.grade.letter}</text>
+    <text x="${WIDTH - PADDING}" y="20" text-anchor="end" class="grade" fill="${gradeColor(s.grade)}">${s.grade.letter}</text>
     ${i < subjects.length - 1 ? `<line x1="${PADDING}" y1="${ROW_HEIGHT}" x2="${WIDTH - PADDING}" y2="${ROW_HEIGHT}" stroke="${theme.border}" stroke-opacity="0.35" />` : ""}
   </g>`;
     })
@@ -83,7 +53,7 @@ export function buildGithubReportCard(profile: GithubProfile, repos: GithubRepo[
       .name { font: 700 16px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
       .term { font: 400 11px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
       .subject { font: 600 11px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
-      .grade { font: 700 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.accent}; }
+      .grade { font: 700 13px 'Segoe UI', Helvetica, Arial, sans-serif; }
       .gpa-label { font: 700 10px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; letter-spacing: 1px; }
       .gpa-value { font: 700 22px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
       .comment { font: 400 italic 11px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }

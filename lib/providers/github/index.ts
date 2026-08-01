@@ -21,8 +21,11 @@ import { buildGithubTradingCard } from "../../cards/githubTradingCard";
 import { buildGithubRpgSheetCard } from "../../cards/githubRpgSheetCard";
 import { buildGithubRpgScrollCard } from "../../cards/githubRpgScrollCard";
 import { buildGithubReportCard } from "../../cards/githubReportCard";
+import { buildGithubDiplomaCard } from "../../cards/githubDiplomaCard";
 import { buildRepoPassportCard } from "../../cards/repoPassportCard";
 import { buildRepoWantedPosterCard } from "../../cards/repoWantedPosterCard";
+import { buildRepoLineupCard } from "../../cards/repoLineupCard";
+import { buildRepoMembershipCard } from "../../cards/repoMembershipCard";
 import { buildErrorCard } from "../../cards/errorCard";
 import { toDataUri } from "../../image";
 import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../cards/layouts/rankedList";
@@ -46,6 +49,7 @@ const statsConfigSchema = z.object({
       "rpg-sheet",
       "rpg-scroll",
       "report-card",
+      "diploma",
     ])
     .default("full"),
 });
@@ -64,7 +68,7 @@ const activityConfigSchema = z.object({
 
 const repoContributionsConfigSchema = z.object({
   repo: z.string().regex(REPO_NAME_PATTERN, "Use owner/repo format"),
-  layout: z.enum([...SINGLE_ITEM_LAYOUTS, "passport", "wanted-poster"]).default("full"),
+  layout: z.enum([...SINGLE_ITEM_LAYOUTS, "passport", "wanted-poster", "lineup", "membership"]).default("full"),
 });
 
 export const githubCardTypes: CardTypeDef[] = [
@@ -97,10 +101,18 @@ async function renderCard(args: {
     const parsed = statsConfigSchema.parse(args.config ?? {});
     if (parsed.layout === "full") return buildGithubStatsCard(profile, args.theme);
 
-    if (parsed.layout === "trading-card" || parsed.layout === "rpg-sheet" || parsed.layout === "report-card") {
+    if (
+      parsed.layout === "trading-card" ||
+      parsed.layout === "rpg-sheet" ||
+      parsed.layout === "rpg-scroll" ||
+      parsed.layout === "report-card" ||
+      parsed.layout === "diploma"
+    ) {
       const [repos, avatar] = await Promise.all([getGithubRepos(profile.login, 100), toDataUri(profile.avatarUrl)]);
       if (parsed.layout === "trading-card") return buildGithubTradingCard(profile, repos, avatar, args.theme);
       if (parsed.layout === "rpg-sheet") return buildGithubRpgSheetCard(profile, repos, avatar, args.theme);
+      if (parsed.layout === "rpg-scroll") return buildGithubRpgScrollCard(profile, repos);
+      if (parsed.layout === "diploma") return buildGithubDiplomaCard(profile, repos);
       return buildGithubReportCard(profile, repos, avatar, args.theme);
     }
 
@@ -176,6 +188,13 @@ async function renderCard(args: {
     if (parsed.layout === "wanted-poster") {
       const holderAvatar = await toDataUri(profile.avatarUrl);
       return buildRepoWantedPosterCard(data, holderAvatar, profile.login);
+    }
+    if (parsed.layout === "lineup") {
+      const holderAvatar = await toDataUri(profile.avatarUrl);
+      return buildRepoLineupCard(data, holderAvatar, profile.login);
+    }
+    if (parsed.layout === "membership") {
+      return buildRepoMembershipCard(data, profile.login, args.theme);
     }
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,

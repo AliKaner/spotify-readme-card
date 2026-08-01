@@ -52,6 +52,11 @@ export function buildRepoPassportCard(
   <title>Contributor Passport — ${holder} — ${repoName}</title>
   <defs>
     <clipPath id="passportPhoto"><rect x="${PHOTO_X}" y="${PHOTO_Y}" width="${PHOTO_SIZE}" height="${PHOTO_SIZE}" rx="4" /></clipPath>
+    <linearGradient id="passportHolo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7dd3fc" /><stop offset="0.25" stop-color="#c4b5fd" />
+      <stop offset="0.5" stop-color="#f9a8d4" /><stop offset="0.75" stop-color="#fde68a" />
+      <stop offset="1" stop-color="#7dd3fc" />
+    </linearGradient>
     ${thumbShadowFilter()}
     <style>
       .title { font: 700 13px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; letter-spacing: 2px; }
@@ -65,6 +70,7 @@ export function buildRepoPassportCard(
 
   <rect x="2" y="2" width="${WIDTH - 4}" height="${HEIGHT - 4}" rx="10" fill="${theme.background}" stroke="${theme.accent}" stroke-width="2.5" />
   <rect x="8" y="8" width="${WIDTH - 16}" height="${HEIGHT - 16}" rx="6" fill="none" stroke="${theme.border}" />
+  <rect x="${WIDTH - 26}" y="8" width="10" height="${HEIGHT - 16}" fill="url(#passportHolo)" opacity="0.55" />
 
   <text x="${PADDING}" y="32" class="title">CONTRIBUTOR PASSPORT</text>
   <text x="${PADDING}" y="46" class="subtitle">ISSUED BY README CARDS · OPEN SOURCE REGISTRY</text>

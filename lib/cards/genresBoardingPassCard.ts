@@ -63,6 +63,10 @@ export function buildGenresBoardingPassCard(genres: GenreCount[], theme: Theme):
   <text x="${PADDING + 90}" y="162" class="field-value">${flightClass}</text>
 
   <line x1="${MAIN_WIDTH}" y1="4" x2="${MAIN_WIDTH}" y2="${HEIGHT - 4}" stroke="${theme.border}" stroke-width="1.5" stroke-dasharray="4 4" />
+  ${Array.from({ length: 7 }, (_, i) => {
+    const cy = 12 + i * ((HEIGHT - 24) / 6);
+    return `<circle cx="${MAIN_WIDTH}" cy="${cy}" r="1.6" fill="${theme.border}" />`;
+  }).join("\n  ")}
 
   <g transform="translate(${MAIN_WIDTH}, 0)">
     <text x="${STUB_WIDTH / 2}" y="30" text-anchor="middle" class="code">${code}</text>

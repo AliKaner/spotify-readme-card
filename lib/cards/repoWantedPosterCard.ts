@@ -41,6 +41,11 @@ export function buildRepoWantedPosterCard(data: RepoContributionsData, avatar: s
   <rect x="10" y="10" width="${WIDTH - 20}" height="${HEIGHT - 20}" fill="none" stroke="${INK}" stroke-width="3" />
   <rect x="15" y="15" width="${WIDTH - 30}" height="${HEIGHT - 30}" fill="none" stroke="${INK}" stroke-width="1" />
 
+  <g>
+    <circle cx="26" cy="24" r="6" fill="${STAMP_RED}" /><circle cx="24.5" cy="22.5" r="2" fill="#ffffff" fill-opacity="0.5" />
+    <circle cx="${WIDTH - 26}" cy="24" r="6" fill="${STAMP_RED}" /><circle cx="${WIDTH - 27.5}" cy="22.5" r="2" fill="#ffffff" fill-opacity="0.5" />
+  </g>
+
   <text x="${WIDTH / 2}" y="52" text-anchor="middle" class="wanted">WANTED</text>
   <text x="${WIDTH / 2}" y="70" text-anchor="middle" class="subtitle">FOR EXCESSIVE COMMITS</text>
 

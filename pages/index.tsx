@@ -67,6 +67,11 @@ const FUN_SHOWCASE = [
   { type: "repo-contributions", layout: "wanted-poster", theme: "default", label: "Repo Contributions · Wanted Poster" },
   { type: "repo-contributions", layout: "passport", theme: "midnight", label: "Repo Contributions · Passport" },
   { type: "top-genres", layout: "boarding-pass", theme: "default", label: "Top Genres · Boarding Pass" },
+  { type: "github-stats", layout: "rpg-scroll", theme: "dracula", label: "GitHub Stats · RPG Scroll" },
+  { type: "github-stats", layout: "diploma", theme: "default", label: "GitHub Stats · Diploma" },
+  { type: "repo-contributions", layout: "lineup", theme: "default", label: "Repo Contributions · Case File" },
+  { type: "repo-contributions", layout: "membership", theme: "ocean", label: "Repo Contributions · Membership" },
+  { type: "top-genres", layout: "luggage-tag", theme: "midnight", label: "Top Genres · Luggage Tag" },
 ];
 
 export default function Home({ providers }: Props) {
