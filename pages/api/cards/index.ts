@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
-import { getConvexSession } from "../../../lib/auth/convexSession";
+import { getConvexSessionFromRequest } from "../../../lib/auth/convexSession";
 import { getProvider } from "../../../lib/providers/registry";
 import { themes } from "../../../lib/themes";
 import { api } from "../../../convex/_generated/api";
@@ -14,7 +14,7 @@ const createCardSchema = z.object({
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getConvexSession(req.cookies);
+  const session = await getConvexSessionFromRequest(req.headers.authorization);
   if (!session) {
     res.status(401).json({ error: "Unauthorized" });
     return;

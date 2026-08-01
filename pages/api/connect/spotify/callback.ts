@@ -1,17 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getConvexSession } from "../../../../lib/auth/convexSession";
 import { exchangeCode, getSpotifyProfile } from "../../../../lib/spotify";
-import { verifyState } from "../../../../lib/oauthState";
+import { verifyAndExtractUserId } from "../../../../lib/oauthState";
 import { encryptToken } from "../../../../lib/crypto";
+import { createConvexClient } from "../../../../lib/convexClient";
 import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
+// Spotify redirects the browser here directly (a plain GET, no Authorization header
+// available). Trust flows through the signed OAuth state instead of a bridged session —
+// see lib/oauthState.ts.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getConvexSession(req.cookies);
-  if (!session) {
-    res.redirect(302, "/signin");
-    return;
-  }
-
   const { code, state, error } = req.query;
 
   if (error || typeof code !== "string" || typeof state !== "string") {
@@ -19,7 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  if (!verifyState(state, session.user._id)) {
+  const userId = verifyAndExtractUserId(state);
+  if (!userId) {
     res.status(400).send("Invalid or expired authorization state. Please try connecting again.");
     return;
   }
@@ -28,7 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const tokens = await exchangeCode(code);
     const profile = await getSpotifyProfile(tokens.accessToken);
 
-    await session.client.mutation(api.connections.upsertForCurrentUser, {
+    const client = createConvexClient();
+    await client.mutation(api.connections.upsertForUser, {
+      userId: userId as Id<"users">,
       provider: "spotify",
       accessToken: encryptToken(tokens.accessToken),
       refreshToken: encryptToken(tokens.refreshToken),

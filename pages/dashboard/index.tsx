@@ -1,67 +1,50 @@
-import type { GetServerSideProps } from "next";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import Link from "next/link";
-import { requireConvexSession } from "../../lib/auth/requireConvexSession";
+import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { authFetch } from "../../lib/authFetch";
 
-interface Props {
-  username: string;
-  avatarUrl: string | null;
-  spotifyConnected: boolean;
-  spotifyDisplayName: string | null;
-}
+export default function Dashboard() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const router = useRouter();
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const result = await requireConvexSession(ctx);
-  if ("redirect" in result) return result;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/signin");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
-  const { client, user } = result;
-  const connection = await client.query(api.connections.getForCurrentUser, { provider: "spotify" });
+  const user = useQuery(api.users.me, isLoading ? "skip" : {});
+  const connection = useQuery(api.connections.getForCurrentUser, isLoading ? "skip" : { provider: "spotify" });
 
-  return {
-    props: {
-      username: user.name ?? "there",
-      avatarUrl: user.image ?? null,
-      spotifyConnected: Boolean(connection),
-      spotifyDisplayName: connection?.displayName ?? null,
-    },
-  };
-};
+  if (isLoading || !isAuthenticated || user === undefined) {
+    return (
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
+        <p style={{ color: "#b3b3b3" }}>Loading…</p>
+      </main>
+    );
+  }
 
-export default function Dashboard({ username, avatarUrl, spotifyConnected, spotifyDisplayName }: Props) {
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-        {avatarUrl && (
+        {user?.image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={username} width={40} height={40} style={{ borderRadius: "50%" }} />
+          <img src={user.image} alt={user.name ?? "avatar"} width={40} height={40} style={{ borderRadius: "50%" }} />
         )}
-        <h1 style={{ fontSize: 22 }}>Welcome, {username}</h1>
+        <h1 style={{ fontSize: 22 }}>Welcome, {user?.name ?? "there"}</h1>
       </div>
 
       <section style={{ margin: "32px 0", padding: 20, border: "1px solid #2a2a2a", borderRadius: 12 }}>
         <h2 style={{ fontSize: 16, marginBottom: 8 }}>Spotify</h2>
-        {spotifyConnected ? (
-          <p style={{ color: "#1db954" }}>Connected as {spotifyDisplayName}</p>
+        {connection === undefined ? (
+          <p style={{ color: "#b3b3b3" }}>Loading…</p>
+        ) : connection ? (
+          <p style={{ color: "#1db954" }}>Connected as {connection.displayName}</p>
         ) : (
-          <>
-            <p style={{ color: "#b3b3b3", marginBottom: 12 }}>
-              Connect your Spotify account to build now-playing and top-tracks cards.
-            </p>
-            <a
-              href="/api/connect/spotify"
-              style={{
-                display: "inline-block",
-                padding: "10px 18px",
-                background: "#1db954",
-                color: "#000",
-                borderRadius: 8,
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              Connect Spotify
-            </a>
-          </>
+          <ConnectSpotifyButton />
         )}
       </section>
 
@@ -69,5 +52,38 @@ export default function Dashboard({ username, avatarUrl, spotifyConnected, spoti
         Manage your cards →
       </Link>
     </main>
+  );
+}
+
+function ConnectSpotifyButton() {
+  const token = useAuthToken();
+
+  async function handleClick() {
+    const response = await authFetch(token, "/api/connect/spotify");
+    if (!response.ok) return;
+    const { url } = await response.json();
+    window.location.href = url;
+  }
+
+  return (
+    <>
+      <p style={{ color: "#b3b3b3", marginBottom: 12 }}>
+        Connect your Spotify account to build now-playing and top-tracks cards.
+      </p>
+      <button
+        onClick={handleClick}
+        style={{
+          padding: "10px 18px",
+          background: "#1db954",
+          color: "#000",
+          border: "none",
+          borderRadius: 8,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Connect Spotify
+      </button>
+    </>
   );
 }

@@ -1,28 +1,27 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/router";
-import type { GetServerSideProps } from "next";
-import { requireConvexSession } from "../../../lib/auth/requireConvexSession";
+import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { authFetch } from "../../../lib/authFetch";
 import { themes } from "../../../lib/themes";
-
-interface Props {
-  spotifyConnected: boolean;
-}
-
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const result = await requireConvexSession(ctx);
-  if ("redirect" in result) return result;
-
-  const connection = await result.client.query(api.connections.getForCurrentUser, { provider: "spotify" });
-
-  return { props: { spotifyConnected: Boolean(connection) } };
-};
 
 const THEME_OPTIONS = Object.keys(themes);
 const fieldStyle = { display: "block", width: "100%", marginTop: 4, padding: 8 };
 
-export default function NewCard({ spotifyConnected }: Props) {
+export default function NewCard() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const token = useAuthToken();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/signin");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  const connection = useQuery(api.connections.getForCurrentUser, isLoading ? "skip" : { provider: "spotify" });
+
   const [type, setType] = useState<"now-playing" | "top-tracks">("now-playing");
   const [theme, setTheme] = useState("default");
   const [timeRange, setTimeRange] = useState("short_term");
@@ -30,7 +29,15 @@ export default function NewCard({ spotifyConnected }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!spotifyConnected) {
+  if (isLoading || !isAuthenticated || connection === undefined) {
+    return (
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
+        <p style={{ color: "#b3b3b3" }}>Loading…</p>
+      </main>
+    );
+  }
+
+  if (!connection) {
     return (
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
         <p>
@@ -47,7 +54,7 @@ export default function NewCard({ spotifyConnected }: Props) {
 
     const config = type === "top-tracks" ? { time_range: timeRange, limit } : {};
 
-    const response = await fetch("/api/cards", {
+    const response = await authFetch(token, "/api/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ provider: "spotify", type, theme, config }),

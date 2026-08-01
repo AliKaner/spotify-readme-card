@@ -1,6 +1,6 @@
 import Head from "next/head";
 import type { GetServerSideProps } from "next";
-import { getConvexSession } from "../lib/auth/convexSession";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { listProviders, type MarketplaceEntry } from "../lib/providers/registry";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://your-deployment.vercel.app";
@@ -9,21 +9,17 @@ const DESCRIPTION =
   "Connect Spotify (and more services soon), build a live SVG card from ready-made themes, and drop it straight into your GitHub profile README. Self-hosted, no third party in the middle of your data.";
 
 interface Props {
-  isSignedIn: boolean;
   providers: MarketplaceEntry[];
 }
 
-export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
-  const session = await getConvexSession(ctx.req.cookies);
-  return {
-    props: {
-      isSignedIn: Boolean(session),
-      providers: listProviders(),
-    },
-  };
+export const getServerSideProps: GetServerSideProps<Props> = async () => {
+  return { props: { providers: listProviders() } };
 };
 
-export default function Home({ isSignedIn, providers }: Props) {
+export default function Home({ providers }: Props) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const showDashboardLink = !isLoading && isAuthenticated;
+
   return (
     <>
       <Head>
@@ -53,7 +49,7 @@ export default function Home({ isSignedIn, providers }: Props) {
         </p>
 
         <a
-          href={isSignedIn ? "/dashboard" : "/signin"}
+          href={showDashboardLink ? "/dashboard" : "/signin"}
           style={{
             display: "inline-block",
             padding: "12px 22px",
@@ -65,7 +61,7 @@ export default function Home({ isSignedIn, providers }: Props) {
             marginBottom: 40,
           }}
         >
-          {isSignedIn ? "Go to dashboard" : "Sign in with GitHub"}
+          {showDashboardLink ? "Go to dashboard" : "Sign in with GitHub"}
         </a>
 
         <section>

@@ -30,8 +30,14 @@ export const getByUserAndProvider = query({
   handler: async (ctx, { userId, provider }) => findConnection(ctx, userId, provider),
 });
 
-export const upsertForCurrentUser = mutation({
+/**
+ * Service-level — called from the Spotify OAuth callback, a plain browser redirect with
+ * no Authorization header to bridge into a Convex identity. Trusts the userId embedded in
+ * the caller's already-verified, HMAC-signed OAuth state (see lib/oauthState.ts) instead.
+ */
+export const upsertForUser = mutation({
   args: {
+    userId: v.id("users"),
     provider: v.string(),
     externalId: v.optional(v.string()),
     displayName: v.optional(v.string()),
@@ -40,10 +46,7 @@ export const upsertForCurrentUser = mutation({
     expiresAt: v.number(),
     scope: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
+  handler: async (ctx, { userId, ...args }) => {
     const existing = await findConnection(ctx, userId, args.provider);
     if (existing) {
       await ctx.db.patch(existing._id, args);

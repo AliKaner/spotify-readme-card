@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getConvexSession } from "../../../lib/auth/convexSession";
+import { getConvexSessionFromRequest } from "../../../lib/auth/convexSession";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getConvexSession(req.cookies);
+  const session = await getConvexSessionFromRequest(req.headers.authorization);
   if (!session) {
     res.status(401).json({ error: "Unauthorized" });
     return;
