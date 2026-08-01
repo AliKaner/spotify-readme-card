@@ -125,7 +125,7 @@ function radial(data: AggregateStatData, theme: Theme, headerLabel: string): str
 function badge(data: AggregateStatData, theme: Theme, headerLabel: string): string {
   const HEIGHT = 40;
   const summary = data.metrics.map((m) => `${m.label} ${Math.round(m.value * 100)}%`).join(" · ");
-  const text = escapeXml(truncateText(summary, 12, 380));
+  const text = escapeXml(truncateText(summary, 11, 380));
 
   return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(headerLabel)}">
   <title>${escapeXml(headerLabel)}</title>
@@ -190,7 +190,7 @@ function portrait(data: AggregateStatData, theme: Theme, headerLabel: string): s
       const y = startY + i * rowH;
       const fillWidth = Math.max(4, m.value * barWidth);
       return `<g transform="translate(0, ${y})">
-    <text x="16" y="0" class="p-label">${escapeXml(truncateText(m.label, 10, barWidth))}</text>
+    <text x="16" y="0" class="p-label">${escapeXml(truncateText(m.label, 11, barWidth))}</text>
     <rect x="16" y="8" width="${barWidth}" height="6" rx="3" fill="${theme.border}" />
     <rect x="16" y="8" width="${fillWidth}" height="6" rx="3" fill="${theme.accent}" />
   </g>`;

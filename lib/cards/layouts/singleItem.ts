@@ -1,6 +1,6 @@
 import type { Theme } from "../../themes";
 import { escapeXml, truncateText } from "../../text";
-import { spotifyGlyph, thumbShadowFilter } from "../shared";
+import { spotifyGlyph, appGlyph, thumbShadowFilter } from "../shared";
 
 export type SingleItemGenericLayout = "compact" | "terminal" | "badge" | "portrait" | "split";
 
@@ -9,6 +9,12 @@ export interface SingleItemData {
   subtitle: string;
   art: string | null;
   statusLabel: string;
+  /** Which corner mark to draw (compact/badge layouts only) — defaults to "spotify". */
+  brand?: "spotify" | "app";
+}
+
+function cornerMark(data: SingleItemData, theme: Theme): string {
+  return data.brand === "app" ? appGlyph(theme.accent) : spotifyGlyph(theme.accent, theme.background);
 }
 
 const WIDTH = 480;
@@ -42,8 +48,8 @@ function compact(data: SingleItemData, theme: Theme): string {
   const ART_X = 10;
   const CONTENT_X = 66;
   const artY = (HEIGHT - ART_SIZE) / 2;
-  const title = escapeXml(truncateText(data.title, 26, 300));
-  const subtitle = escapeXml(truncateText(data.subtitle, 22, 300));
+  const title = escapeXml(truncateText(data.title, 14, 300));
+  const subtitle = escapeXml(truncateText(data.subtitle, 12, 300));
 
   return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title} — ${subtitle}">
   <title>${title} — ${subtitle}</title>
@@ -64,14 +70,14 @@ function compact(data: SingleItemData, theme: Theme): string {
   <circle cx="${CONTENT_X - 10}" cy="22" r="3" fill="${theme.accent}" />
   <text x="${CONTENT_X}" y="27" class="title">${title}</text>
   <text x="${CONTENT_X}" y="44" class="subtitle">${subtitle}</text>
-  <g transform="translate(${WIDTH - 30}, ${HEIGHT / 2 - 8})" opacity="0.6">${spotifyGlyph(theme.accent, theme.background)}</g>
+  <g transform="translate(${WIDTH - 30}, ${HEIGHT / 2 - 8})" opacity="0.6">${cornerMark(data, theme)}</g>
 </svg>`;
 }
 
 function terminal(data: SingleItemData, theme: Theme): string {
   const HEIGHT = 120;
-  const title = escapeXml(truncateText(data.title, 12, 340));
-  const subtitle = escapeXml(truncateText(data.subtitle, 12, 340));
+  const title = escapeXml(truncateText(data.title, 13, 340));
+  const subtitle = escapeXml(truncateText(data.subtitle, 13, 340));
   const prompt = escapeXml(data.statusLabel.toLowerCase().replace(/\s+/g, "-"));
 
   return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title} — ${subtitle}">
@@ -111,7 +117,7 @@ function badge(data: SingleItemData, theme: Theme): string {
     <animate attributeName="opacity" values="1;0.35;1" dur="1.6s" repeatCount="indefinite" />
   </circle>
   <text x="34" y="${HEIGHT / 2 + 4}" class="label">${title}</text>
-  <g transform="translate(${WIDTH - 28}, ${HEIGHT / 2 - 8})" opacity="0.6">${spotifyGlyph(theme.accent, theme.background)}</g>
+  <g transform="translate(${WIDTH - 28}, ${HEIGHT / 2 - 8})" opacity="0.6">${cornerMark(data, theme)}</g>
 </svg>`;
 }
 
@@ -160,7 +166,7 @@ function split(data: SingleItemData, theme: Theme): string {
   const ART_WIDTH = 190;
   const CONTENT_X = ART_WIDTH + 28;
   const title = escapeXml(truncateText(data.title, 16, WIDTH - CONTENT_X - 16));
-  const subtitle = escapeXml(truncateText(data.subtitle, 13, WIDTH - CONTENT_X - 16));
+  const subtitle = escapeXml(truncateText(data.subtitle, 12, WIDTH - CONTENT_X - 16));
   const pillLabel = escapeXml(data.statusLabel.toUpperCase());
   const pillWidth = Math.round(pillLabel.length * 6.6 + 20);
 

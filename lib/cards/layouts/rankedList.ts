@@ -73,7 +73,7 @@ function grid(items: RankedItem[], theme: Theme, headerLabel: string): string {
       const row = Math.floor(i / columns);
       const x = PADDING + col * (cellSize + gap);
       const y = headerH + row * (cellHeight + gap);
-      const name = escapeXml(truncateText(item.title, 12, cellSize));
+      const name = escapeXml(truncateText(item.title, 11, cellSize));
       return `<g transform="translate(${x}, ${y})">
     <g filter="url(#thumbShadow)">
       ${item.art ? `<clipPath id="gr${i}"><rect width="${cellSize}" height="${cellSize}" rx="10" /></clipPath>
@@ -155,7 +155,7 @@ function terminal(items: RankedItem[], theme: Theme, headerLabel: string): strin
       const label = item.subtitle
         ? `${item.title} — ${item.subtitle}`
         : item.title;
-      return `<text x="18" y="${y}" class="mono"><tspan class="idx">${i + 1}.</tspan><tspan class="val" dx="8">${escapeXml(truncateText(label, 11, 400))}</tspan></text>`;
+      return `<text x="18" y="${y}" class="mono"><tspan class="idx">${i + 1}.</tspan><tspan class="val" dx="8">${escapeXml(truncateText(label, 12, 400))}</tspan></text>`;
     })
     .join("\n  ");
 
@@ -191,7 +191,7 @@ function bars(items: RankedItem[], theme: Theme, headerLabel: string): string {
       const y = headerH + i * rowH;
       const weight = (items.length - i) / items.length;
       const fillWidth = Math.max(6, weight * barWidth);
-      const label = escapeXml(truncateText(item.title, 13, barWidth));
+      const label = escapeXml(truncateText(item.title, 12, barWidth));
       return `<g transform="translate(0, ${y})">
     <text x="${PADDING}" y="10" class="bar-label">${label}</text>
     <rect x="${PADDING}" y="16" width="${barWidth}" height="${barHeight}" rx="${barHeight / 2}" fill="${theme.border}" />

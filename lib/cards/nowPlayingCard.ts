@@ -81,8 +81,8 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
 export function buildNowPlayingCompactCard(track: Track | null, albumArt: string | null, theme: Theme): string {
   if (!track) return buildEmptyCard(theme, COMPACT_HEIGHT);
 
-  const title = escapeXml(truncateText(track.title, 26, 300));
-  const artist = escapeXml(truncateText(track.artist, 22, 300));
+  const title = escapeXml(truncateText(track.title, 14, 300));
+  const artist = escapeXml(truncateText(track.artist, 12, 300));
   const artY = (COMPACT_HEIGHT - COMPACT_ART_SIZE) / 2;
 
   return `<svg width="${WIDTH}" height="${COMPACT_HEIGHT}" viewBox="0 0 ${WIDTH} ${COMPACT_HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title} by ${artist} on Spotify">

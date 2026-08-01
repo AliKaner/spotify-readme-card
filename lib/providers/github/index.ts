@@ -3,15 +3,29 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import type { Theme } from "../../themes";
 import { createConvexClient } from "../../convexClient";
 import { api } from "../../../convex/_generated/api";
-import { getGithubProfileById, getGithubRepos, getGithubRecentActivity, computeTopRepos, computeTopLanguages } from "../../github";
+import {
+  getGithubProfileById,
+  getGithubRepos,
+  getGithubRecentActivity,
+  getGithubRepoInfo,
+  getGithubContributors,
+  computeTopRepos,
+  computeTopLanguages,
+} from "../../github";
 import { buildGithubStatsCard } from "../../cards/githubStatsCard";
 import { buildTopLanguagesCard } from "../../cards/topLanguagesCard";
 import { buildGithubReposCard } from "../../cards/githubReposCard";
 import { buildGithubActivityCard } from "../../cards/githubActivityCard";
+import { buildRepoContributionsCard } from "../../cards/repoContributionsCard";
 import { buildErrorCard } from "../../cards/errorCard";
+import { toDataUri } from "../../image";
 import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../cards/layouts/rankedList";
 import { renderAggregateStatLayout, type AggregateStatGenericLayout } from "../../cards/layouts/aggregateStat";
+import { renderSingleItemLayout, type SingleItemGenericLayout } from "../../cards/layouts/singleItem";
 import type { CardTypeDef, Provider } from "../types";
+
+const SINGLE_ITEM_LAYOUTS = ["full", "compact", "terminal", "badge", "portrait", "split"] as const;
+const REPO_NAME_PATTERN = /^[\w.-]+\/[\w.-]+$/;
 
 const statsConfigSchema = z.object({
   layout: z.enum(["full", "terminal", "radial", "badge", "tiles", "portrait"]).default("full"),
@@ -29,11 +43,22 @@ const activityConfigSchema = z.object({
   layout: z.enum(["list", "grid", "avatars", "terminal", "bars", "compact"]).default("list"),
 });
 
+const repoContributionsConfigSchema = z.object({
+  repo: z.string().regex(REPO_NAME_PATTERN, "Use owner/repo format"),
+  layout: z.enum(SINGLE_ITEM_LAYOUTS).default("full"),
+});
+
 export const githubCardTypes: CardTypeDef[] = [
   { id: "github-stats", label: "GitHub Stats", configSchema: statsConfigSchema, defaultConfig: { layout: "full" } },
   { id: "top-languages", label: "Top Languages", configSchema: languagesConfigSchema, defaultConfig: { layout: "bars" } },
   { id: "top-repos", label: "Top Repositories", configSchema: reposConfigSchema, defaultConfig: { layout: "list" } },
   { id: "recent-activity", label: "Recent Activity", configSchema: activityConfigSchema, defaultConfig: { layout: "list" } },
+  {
+    id: "repo-contributions",
+    label: "Repo Contributions",
+    configSchema: repoContributionsConfigSchema,
+    defaultConfig: { repo: "", layout: "full" },
+  },
 ];
 
 async function renderCard(args: {
@@ -95,6 +120,40 @@ async function renderCard(args: {
 
     const items: RankedItem[] = activity.map((a) => ({ title: a.message, subtitle: a.repo, art: null }));
     return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, args.theme, "Recent Activity");
+  }
+
+  if (args.type === "repo-contributions") {
+    const parsed = repoContributionsConfigSchema.parse(args.config ?? {});
+    const [owner, name] = parsed.repo.split("/");
+
+    const repoInfo = await getGithubRepoInfo(owner, name);
+    if (!repoInfo) return buildErrorCard(`Repository "${parsed.repo}" not found`);
+
+    const contributors = await getGithubContributors(owner, name);
+    const index = contributors.findIndex((c) => c.login.toLowerCase() === profile.login.toLowerCase());
+    const mine = index >= 0 ? contributors[index] : null;
+    const art = await toDataUri(repoInfo.ownerAvatarUrl);
+
+    const data = {
+      fullName: repoInfo.fullName,
+      contributions: mine?.contributions ?? 0,
+      rank: index >= 0 ? index + 1 : null,
+      totalContributors: contributors.length,
+      description: repoInfo.description,
+    };
+
+    if (parsed.layout === "full") return buildRepoContributionsCard(data, art, args.theme);
+    return renderSingleItemLayout(
+      parsed.layout as SingleItemGenericLayout,
+      {
+        title: `${data.contributions} ${data.contributions === 1 ? "commit" : "commits"}`,
+        subtitle: `${repoInfo.fullName} · ${data.rank ? `#${data.rank}` : `${data.totalContributors} total`}`,
+        art,
+        statusLabel: "Contributor",
+        brand: "app",
+      },
+      args.theme
+    );
   }
 
   throw new Error(`Unknown GitHub card type: ${args.type}`);

@@ -104,6 +104,58 @@ export function computeTopLanguages(repos: GithubRepo[], limit = 5): LanguageCou
     .slice(0, limit);
 }
 
+export interface GithubRepoInfo {
+  name: string;
+  fullName: string;
+  description: string | null;
+  stars: number;
+  language: string | null;
+  ownerAvatarUrl: string;
+  htmlUrl: string;
+}
+
+export async function getGithubRepoInfo(owner: string, name: string): Promise<GithubRepoInfo | null> {
+  const data = await githubGet(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`);
+  if (!data) return null;
+
+  return {
+    name: data.name,
+    fullName: data.full_name,
+    description: data.description,
+    stars: data.stargazers_count ?? 0,
+    language: data.language,
+    ownerAvatarUrl: data.owner?.avatar_url ?? "",
+    htmlUrl: data.html_url,
+  };
+}
+
+export interface GithubContributor {
+  login: string;
+  avatarUrl: string;
+  contributions: number;
+}
+
+/**
+ * GitHub returns contributors sorted by commit count already, so index+1 is the rank.
+ * Capped at 300 (3 pages) — enough to rank a contributor on all but the largest repos,
+ * without an unbounded number of requests for huge projects.
+ */
+export async function getGithubContributors(owner: string, name: string, maxPages = 3): Promise<GithubContributor[]> {
+  const contributors: GithubContributor[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const data = await githubGet(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contributors?per_page=100&page=${page}`);
+    if (!Array.isArray(data) || data.length === 0) break;
+
+    contributors.push(
+      ...data
+        .filter((c: any) => c.login && c.type !== "Anonymous")
+        .map((c: any) => ({ login: c.login, avatarUrl: c.avatar_url, contributions: c.contributions ?? 0 }))
+    );
+    if (data.length < 100) break;
+  }
+  return contributors;
+}
+
 export async function getGithubRecentActivity(login: string, limit = 5): Promise<GithubActivity[]> {
   const data = await githubGet(`/users/${encodeURIComponent(login)}/events/public?per_page=30`);
   if (!Array.isArray(data)) return [];

@@ -20,8 +20,8 @@ export function buildGithubReposCard(repos: GithubRepo[], theme: Theme): string 
   const rows = repos
     .map((repo, i) => {
       const y = HEADER_HEIGHT + i * ROW_HEIGHT;
-      const name = escapeXml(truncateText(repo.name, 14, 220));
-      const desc = escapeXml(truncateText(repo.description ?? repo.language ?? "", 12, 200));
+      const name = escapeXml(truncateText(repo.name, 13, 220));
+      const desc = escapeXml(truncateText(repo.description ?? repo.language ?? "", 11, 200));
       const isLast = i === repos.length - 1;
       return `<g transform="translate(0, ${y})">
     <text x="${PADDING}" y="16" class="repo-name">${name}</text>

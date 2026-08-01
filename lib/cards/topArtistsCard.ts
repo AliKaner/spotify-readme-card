@@ -44,8 +44,8 @@ export function buildTopArtistsCard(artists: TopArtistWithArt[], theme: Theme, t
   const rows = artists
     .map(({ artist, art }, i) => {
       const y = HEADER_HEIGHT + i * ROW_HEIGHT;
-      const name = escapeXml(truncateText(artist.name, 15, TEXT_MAX_WIDTH));
-      const genre = escapeXml(truncateText(artist.genre ?? "", 16, TEXT_MAX_WIDTH));
+      const name = escapeXml(truncateText(artist.name, 14, TEXT_MAX_WIDTH));
+      const genre = escapeXml(truncateText(artist.genre ?? "", 12, TEXT_MAX_WIDTH));
       const isLast = i === artists.length - 1;
       const cx = ART_X + ART_SIZE / 2;
       const cy = 8 + ART_SIZE / 2;

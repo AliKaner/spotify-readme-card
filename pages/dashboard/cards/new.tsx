@@ -32,6 +32,7 @@ type CardType =
   | "top-languages"
   | "top-repos"
   | "recent-activity"
+  | "repo-contributions"
   | "badges";
 
 type ProviderId = "spotify" | "custom" | "github" | "achievements";
@@ -70,6 +71,7 @@ const TYPE_OPTIONS: { id: CardType; label: string; provider: ProviderId }[] = [
   { id: "top-languages", label: "Top Languages", provider: "github" },
   { id: "top-repos", label: "Top Repositories", provider: "github" },
   { id: "recent-activity", label: "Recent Activity", provider: "github" },
+  { id: "repo-contributions", label: "Repo Contributions", provider: "github" },
   { id: "badges", label: "Badges", provider: "achievements" },
 ];
 
@@ -81,6 +83,7 @@ const SINGLE_ITEM_TYPES: CardType[] = [
   "product",
   "social",
   "hobby-stat",
+  "repo-contributions",
 ];
 const RANKED_LIST_TYPES: CardType[] = ["top-tracks", "top-artists", "recently-played", "top-repos", "recent-activity"];
 
@@ -237,6 +240,7 @@ export default function NewCard() {
   const [hobbyValue, setHobbyValue] = useState("");
   const [hobbyDescription, setHobbyDescription] = useState("");
   const [hobbyImageUrl, setHobbyImageUrl] = useState("");
+  const [repoInput, setRepoInput] = useState("");
   const [badgeCatalog, setBadgeCatalog] = useState<BadgeItem[] | null>(null);
   const [selectedBadgeIds, setSelectedBadgeIds] = useState<string[]>([]);
 
@@ -250,6 +254,7 @@ export default function NewCard() {
   const showTimeRange = !featuredPickerType && (type === "top-tracks" || type === "top-artists" || type === "top-genres" || type === "sonic-profile");
   const showCount = type === "top-tracks" || type === "top-artists" || type === "recently-played";
   const spotifyNotConnected = currentOption.provider === "spotify" && !connection;
+  const needsFreeformValidation = currentOption.provider === "custom" || type === "repo-contributions";
 
   function updateGalleryImage(index: number, field: "url" | "caption", value: string) {
     setGalleryImages((prev) => prev.map((img, i) => (i === index ? { ...img, [field]: value } : img)));
@@ -278,7 +283,9 @@ export default function NewCard() {
     });
   }
 
-  function isCustomFormReady(): boolean {
+  // Types with freeform text config (as opposed to arrow-cycled options) need their own
+  // "has enough been filled in to preview this yet" check.
+  function isFreeformFormReady(): boolean {
     if (type === "product") return productName.trim().length > 0;
     if (type === "social") {
       const platformReady = socialPlatform !== "other" || socialOtherPlatform.trim().length > 0;
@@ -286,6 +293,7 @@ export default function NewCard() {
     }
     if (type === "hobby-stat") return hobbyLabel.trim().length > 0 && hobbyValue.trim().length > 0;
     if (type === "gallery") return galleryImages.some((img) => img.url.trim().length > 0);
+    if (type === "repo-contributions") return repoInput.trim().includes("/");
     return true;
   }
 
@@ -331,6 +339,9 @@ export default function NewCard() {
     if (type === "badges") {
       return { selectedIds: selectedBadgeIds.length > 0 ? selectedBadgeIds : undefined };
     }
+    if (type === "repo-contributions") {
+      return { repo: repoInput.trim(), layout };
+    }
     return { layout };
   }
 
@@ -359,7 +370,7 @@ export default function NewCard() {
       setPreviewError(null);
       return;
     }
-    if (currentOption.provider === "custom" && !isCustomFormReady()) {
+    if (needsFreeformValidation && !isFreeformFormReady()) {
       setPreviewUrl(null);
       setPreviewError(null);
       return;
@@ -419,6 +430,7 @@ export default function NewCard() {
     hobbyValue,
     hobbyDescription,
     hobbyImageUrl,
+    repoInput,
     selectedBadgeIds,
   ]);
 
@@ -461,7 +473,7 @@ export default function NewCard() {
     submitting ||
     Boolean(featuredPickerType && !featuredSelection) ||
     spotifyNotConnected ||
-    (currentOption.provider === "custom" && !isCustomFormReady());
+    (needsFreeformValidation && !isFreeformFormReady());
 
   return (
     <>
@@ -484,7 +496,7 @@ export default function NewCard() {
               </p>
             ) : featuredPickerType && !featuredSelection ? (
               <p className="px-4 text-center text-sm text-text-muted">Search and pick one to preview it here.</p>
-            ) : currentOption.provider === "custom" && !isCustomFormReady() ? (
+            ) : needsFreeformValidation && !isFreeformFormReady() ? (
               <p className="px-4 text-center text-sm text-text-muted">Fill in the details to preview your card here.</p>
             ) : previewError ? (
               <p className="px-4 text-center text-sm text-red-400">{previewError}</p>
@@ -821,6 +833,25 @@ export default function NewCard() {
                         className={inputClass}
                       />
                     </label>
+                  </div>
+                )}
+
+                {type === "repo-contributions" && (
+                  <div className="space-y-4 py-3">
+                    <label className={fieldLabelClass}>
+                      Repository
+                      <input
+                        type="text"
+                        value={repoInput}
+                        onChange={(e) => setRepoInput(e.target.value)}
+                        placeholder="vercel/next.js"
+                        className={inputClass}
+                      />
+                    </label>
+                    <p className="text-xs text-text-muted">
+                      Shows how many commits you&apos;ve made to this public repo, and your rank among its
+                      contributors.
+                    </p>
                   </div>
                 )}
               </div>

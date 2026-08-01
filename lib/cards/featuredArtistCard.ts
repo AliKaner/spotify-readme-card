@@ -13,7 +13,7 @@ const CONTENT_X = 140;
 export function buildFeaturedArtistCard(artist: FeaturedArtist | null, art: string | null, theme: Theme): string {
   if (!artist) return buildEmptyCard(theme);
 
-  const name = escapeXml(truncateText(artist.name, 19, 290));
+  const name = escapeXml(truncateText(artist.name, 17, 290));
   const genreLine = artist.genres.slice(0, 2).join(" · ") || "Artist";
   const followers = artist.followers != null ? `${formatCount(artist.followers)} followers` : "";
   const subtitle = escapeXml(truncateText(followers ? `${genreLine} · ${followers}` : genreLine, 13, 280));

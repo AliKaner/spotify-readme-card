@@ -36,7 +36,7 @@ export function buildGalleryStackCard(images: GalleryImage[], theme: Theme, titl
     })
     .join("\n  ");
 
-  const label = escapeXml(truncateText(title, 14, WIDTH - 32));
+  const label = escapeXml(truncateText(title, 10, WIDTH - 32));
 
   return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
   <title>${label}</title>

@@ -16,7 +16,7 @@ const ART_Y = 20;
 const CONTENT_X = 140;
 
 export function buildProductCard(product: ProductData, imageArt: string | null, theme: Theme): string {
-  const name = escapeXml(truncateText(product.name, 16, 290));
+  const name = escapeXml(truncateText(product.name, 17, 290));
   const sub = escapeXml(truncateText(product.description ?? "", 13, 280));
   const pillLabel = escapeXml(product.price ? product.price : "PRODUCT");
   const pillWidth = Math.round(pillLabel.length * 7.4 + 24);

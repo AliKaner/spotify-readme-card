@@ -92,7 +92,7 @@ async function renderCard(args: { userId: Id<"users">; type: string; theme: Them
     }
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,
-      { title: parsed.name, subtitle: parsed.price ?? parsed.description ?? "", art, statusLabel: "Product" },
+      { title: parsed.name, subtitle: parsed.price ?? parsed.description ?? "", art, statusLabel: "Product", brand: "app" },
       theme
     );
   }
@@ -103,7 +103,7 @@ async function renderCard(args: { userId: Id<"users">; type: string; theme: Them
     const handle = parsed.handle.startsWith("@") ? parsed.handle : `@${parsed.handle}`;
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,
-      { title: handle, subtitle: parsed.platform, art: null, statusLabel: "Social" },
+      { title: handle, subtitle: parsed.platform, art: null, statusLabel: "Social", brand: "app" },
       theme
     );
   }
@@ -114,7 +114,7 @@ async function renderCard(args: { userId: Id<"users">; type: string; theme: Them
     if (parsed.layout === "full") return buildHobbyStatCard(parsed, art, theme);
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,
-      { title: parsed.value, subtitle: parsed.label, art, statusLabel: "Hobby Stat" },
+      { title: parsed.value, subtitle: parsed.label, art, statusLabel: "Hobby Stat", brand: "app" },
       theme
     );
   }
