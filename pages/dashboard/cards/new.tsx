@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { authFetch } from "../../../lib/authFetch";
 import { themes } from "../../../lib/themes";
@@ -11,9 +12,65 @@ import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 
 const THEME_OPTIONS = Object.keys(themes);
-const fieldClass =
-  "mt-1.5 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-accent focus:outline-none";
-const labelClass = "block text-sm font-medium";
+
+const TYPE_OPTIONS: { id: "now-playing" | "top-tracks"; label: string }[] = [
+  { id: "now-playing", label: "Now Playing" },
+  { id: "top-tracks", label: "Top Tracks" },
+];
+
+const TIME_RANGE_OPTIONS: { id: "short_term" | "medium_term" | "long_term"; label: string }[] = [
+  { id: "short_term", label: "Last 4 Weeks" },
+  { id: "medium_term", label: "Last 6 Months" },
+  { id: "long_term", label: "All Time" },
+];
+
+function cycleId<T extends string>(options: { id: T }[], current: T, dir: 1 | -1): T {
+  const ids = options.map((o) => o.id);
+  const idx = ids.indexOf(current);
+  return ids[(idx + dir + ids.length) % ids.length];
+}
+
+function cycleValue<T>(values: readonly T[], current: T, dir: 1 | -1): T {
+  const idx = values.indexOf(current);
+  return values[(idx + dir + values.length) % values.length];
+}
+
+function AttributeRow({
+  label,
+  value,
+  onPrev,
+  onNext,
+}: {
+  label: string;
+  value: string;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <span className="text-sm text-text-muted">{label}</span>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onPrev}
+          aria-label={`Previous ${label}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="w-32 text-center text-sm font-medium capitalize">{value}</span>
+        <button
+          type="button"
+          onClick={onNext}
+          aria-label={`Next ${label}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function NewCard() {
   const router = useRouter();
@@ -30,10 +87,59 @@ export default function NewCard() {
 
   const [type, setType] = useState<"now-playing" | "top-tracks">("now-playing");
   const [theme, setTheme] = useState("default");
-  const [timeRange, setTimeRange] = useState("short_term");
+  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("short_term");
   const [limit, setLimit] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+
+  // Live preview: debounced fetch of the SVG for the current (unsaved) form state,
+  // rendered via a blob URL so we can attach the auth token without exposing it in an
+  // <img src> URL.
+  useEffect(() => {
+    if (!connection || !token) return;
+
+    const config = type === "top-tracks" ? { time_range: timeRange, limit } : {};
+    const timeout = setTimeout(async () => {
+      setPreviewLoading(true);
+      setPreviewError(null);
+      try {
+        const response = await authFetch(token, "/api/cards/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: "spotify", type, theme, config }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setPreviewError(data.error ?? "Failed to load preview.");
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = url;
+        setPreviewUrl(url);
+      } catch {
+        setPreviewError("Failed to load preview.");
+      } finally {
+        setPreviewLoading(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timeout);
+  }, [connection, token, type, theme, timeRange, limit]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
 
   if (isLoading || !isAuthenticated || connection === undefined) {
     return (
@@ -87,61 +193,82 @@ export default function NewCard() {
       </Head>
       <Layout>
         <h1 className="text-2xl font-semibold">New card</h1>
-        <p className="mt-1 text-text-muted">Pick a card type, a theme, and any options.</p>
+        <p className="mt-1 text-text-muted">Flip through options with the arrows — the preview updates live.</p>
 
-        <Card className="mt-8 max-w-md">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <label className={labelClass}>
-              Card type
-              <select value={type} onChange={(e) => setType(e.target.value as "now-playing" | "top-tracks")} className={fieldClass}>
-                <option value="now-playing">Now Playing</option>
-                <option value="top-tracks">Top Tracks</option>
-              </select>
-            </label>
-
-            <label className={labelClass}>
-              Theme
-              <select value={theme} onChange={(e) => setTheme(e.target.value)} className={fieldClass}>
-                {THEME_OPTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {type === "top-tracks" && (
-              <>
-                <label className={labelClass}>
-                  Time range
-                  <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={fieldClass}>
-                    <option value="short_term">Last 4 weeks</option>
-                    <option value="medium_term">Last 6 months</option>
-                    <option value="long_term">All time</option>
-                  </select>
-                </label>
-
-                <label className={labelClass}>
-                  Number of tracks
-                  <input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={limit}
-                    onChange={(e) => setLimit(Number(e.target.value))}
-                    className={fieldClass}
-                  />
-                </label>
-              </>
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <Card className="flex min-h-[220px] items-center justify-center bg-bg">
+            {previewError ? (
+              <p className="px-4 text-center text-sm text-red-400">{previewError}</p>
+            ) : previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt="Card preview"
+                className={`max-w-full transition-opacity ${previewLoading ? "opacity-50" : "opacity-100"}`}
+              />
+            ) : (
+              <p className="text-sm text-text-muted">Loading preview…</p>
             )}
+          </Card>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+          <Card>
+            <form onSubmit={handleSubmit}>
+              <div className="divide-y divide-border">
+                <AttributeRow
+                  label="Card type"
+                  value={TYPE_OPTIONS.find((t) => t.id === type)!.label}
+                  onPrev={() => setType(cycleId(TYPE_OPTIONS, type, -1))}
+                  onNext={() => setType(cycleId(TYPE_OPTIONS, type, 1))}
+                />
+                <AttributeRow
+                  label="Theme"
+                  value={theme}
+                  onPrev={() => setTheme(cycleValue(THEME_OPTIONS, theme, -1))}
+                  onNext={() => setTheme(cycleValue(THEME_OPTIONS, theme, 1))}
+                />
 
-            <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? "Creating…" : "Create card"}
-            </Button>
-          </form>
-        </Card>
+                {type === "top-tracks" && (
+                  <>
+                    <AttributeRow
+                      label="Time range"
+                      value={TIME_RANGE_OPTIONS.find((t) => t.id === timeRange)!.label}
+                      onPrev={() => setTimeRange(cycleId(TIME_RANGE_OPTIONS, timeRange, -1))}
+                      onNext={() => setTimeRange(cycleId(TIME_RANGE_OPTIONS, timeRange, 1))}
+                    />
+                    <div className="flex items-center justify-between py-3">
+                      <span className="text-sm text-text-muted">Number of tracks</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setLimit((n) => Math.max(1, n - 1))}
+                          aria-label="Fewer tracks"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-32 text-center text-sm font-medium">{limit}</span>
+                        <button
+                          type="button"
+                          onClick={() => setLimit((n) => Math.min(10, n + 1))}
+                          aria-label="More tracks"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:bg-surface-hover hover:text-text"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+              <Button type="submit" disabled={submitting} className="mt-6 w-full">
+                {submitting ? "Creating…" : "Create card"}
+              </Button>
+            </form>
+          </Card>
+        </div>
       </Layout>
     </>
   );

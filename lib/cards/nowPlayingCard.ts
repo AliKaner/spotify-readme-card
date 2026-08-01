@@ -1,7 +1,7 @@
 import type { Track } from "../spotify";
 import type { Theme } from "../themes";
 import { escapeXml, truncateText } from "../text";
-import { brandFooter, cardBackdrop, thumbShadowFilter } from "./shared";
+import { brandFooter, cardBackdrop, spotifyGlyph, thumbShadowFilter } from "./shared";
 
 const WIDTH = 480;
 const HEIGHT = 140;
@@ -9,6 +9,11 @@ const ART_SIZE = 100;
 const ART_X = 20;
 const ART_Y = 20;
 const CONTENT_X = 140;
+
+const COMPACT_HEIGHT = 64;
+const COMPACT_ART_SIZE = 44;
+const COMPACT_ART_X = 10;
+const COMPACT_CONTENT_X = 66;
 
 export function buildNowPlayingCard(track: Track | null, albumArt: string | null, theme: Theme): string {
   if (!track) return buildEmptyCard(theme);
@@ -73,7 +78,43 @@ export function buildNowPlayingCard(track: Track | null, albumArt: string | null
 </svg>`;
 }
 
-function statusDot(theme: Theme, isPlaying: boolean): string {
+export function buildNowPlayingCompactCard(track: Track | null, albumArt: string | null, theme: Theme): string {
+  if (!track) return buildEmptyCard(theme, COMPACT_HEIGHT);
+
+  const title = escapeXml(truncateText(track.title, 26, 300));
+  const artist = escapeXml(truncateText(track.artist, 22, 300));
+  const artY = (COMPACT_HEIGHT - COMPACT_ART_SIZE) / 2;
+
+  return `<svg width="${WIDTH}" height="${COMPACT_HEIGHT}" viewBox="0 0 ${WIDTH} ${COMPACT_HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${title} by ${artist} on Spotify">
+  <title>${title} — ${artist}</title>
+  <defs>
+    <clipPath id="compactArtClip"><rect x="${COMPACT_ART_X}" y="${artY}" width="${COMPACT_ART_SIZE}" height="${COMPACT_ART_SIZE}" rx="10" /></clipPath>
+    ${thumbShadowFilter()}
+    <style>
+      .ctitle { font: 700 14px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
+      .cartist { font: 400 12px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.secondaryText}; }
+    </style>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${COMPACT_HEIGHT - 1}" rx="14" fill="${theme.background}" stroke="${theme.border}" />
+
+  <g filter="url(#thumbShadow)">
+    ${albumArt ? `<image href="${albumArt}" x="${COMPACT_ART_X}" y="${artY}" width="${COMPACT_ART_SIZE}" height="${COMPACT_ART_SIZE}" clip-path="url(#compactArtClip)" preserveAspectRatio="xMidYMid slice" />`
+      : `<rect x="${COMPACT_ART_X}" y="${artY}" width="${COMPACT_ART_SIZE}" height="${COMPACT_ART_SIZE}" rx="10" fill="${theme.border}" />`}
+  </g>
+  <rect x="${COMPACT_ART_X + 0.5}" y="${artY + 0.5}" width="${COMPACT_ART_SIZE - 1}" height="${COMPACT_ART_SIZE - 1}" rx="10" fill="none" stroke="${theme.accent}" stroke-opacity="0.35" />
+
+  ${statusDot(theme, track.isPlaying, COMPACT_CONTENT_X - 12, COMPACT_HEIGHT / 2 - 12)}
+  <text x="${COMPACT_CONTENT_X}" y="27" class="ctitle">${title}</text>
+  <text x="${COMPACT_CONTENT_X}" y="44" class="cartist">${artist}</text>
+
+  <g transform="translate(${WIDTH - 30}, ${COMPACT_HEIGHT / 2 - 8})" opacity="0.6">
+    ${spotifyGlyph(theme.accent, theme.background)}
+  </g>
+</svg>`;
+}
+
+function statusDot(theme: Theme, isPlaying: boolean, x = 10, y = 11): string {
   if (!isPlaying) {
     return `<circle cx="10" cy="11" r="3" fill="${theme.secondaryText}" />`;
   }

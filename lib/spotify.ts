@@ -6,6 +6,7 @@ const SPOTIFY_ME_ENDPOINT = "https://api.spotify.com/v1/me";
 const NOW_PLAYING_ENDPOINT = "https://api.spotify.com/v1/me/player/currently-playing";
 const RECENTLY_PLAYED_ENDPOINT = "https://api.spotify.com/v1/me/player/recently-played?limit=1";
 const TOP_TRACKS_ENDPOINT = "https://api.spotify.com/v1/me/top/tracks";
+const TOP_ARTISTS_ENDPOINT = "https://api.spotify.com/v1/me/top/artists";
 
 export const SPOTIFY_SCOPES = ["user-read-currently-playing", "user-read-recently-played", "user-top-read"].join(" ");
 
@@ -23,6 +24,13 @@ export interface TopTrack {
   artist: string;
   albumImageUrl?: string;
   songUrl: string;
+}
+
+export interface TopArtist {
+  name: string;
+  genre?: string;
+  imageUrl?: string;
+  artistUrl: string;
 }
 
 export type TimeRange = "short_term" | "medium_term" | "long_term";
@@ -193,5 +201,29 @@ export async function getTopTracks(
     artist: (item.artists ?? []).map((a: any) => a.name).join(", "),
     albumImageUrl: item.album?.images?.[0]?.url,
     songUrl: item.external_urls?.spotify ?? "",
+  }));
+}
+
+export async function getTopArtists(
+  accessToken: string,
+  timeRange: TimeRange = "short_term",
+  limit = 5
+): Promise<TopArtist[]> {
+  const url = new URL(TOP_ARTISTS_ENDPOINT);
+  url.searchParams.set("time_range", timeRange);
+  url.searchParams.set("limit", String(Math.min(Math.max(limit, 1), 10)));
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return (data.items ?? []).map((item: any) => ({
+    name: item.name,
+    genre: item.genres?.[0],
+    imageUrl: item.images?.[0]?.url,
+    artistUrl: item.external_urls?.spotify ?? "",
   }));
 }
