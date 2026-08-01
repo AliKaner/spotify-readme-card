@@ -19,6 +19,7 @@ import { buildGithubActivityCard } from "../../cards/githubActivityCard";
 import { buildRepoContributionsCard } from "../../cards/repoContributionsCard";
 import { buildGithubTradingCard } from "../../cards/githubTradingCard";
 import { buildGithubRpgSheetCard } from "../../cards/githubRpgSheetCard";
+import { buildGithubRpgScrollCard } from "../../cards/githubRpgScrollCard";
 import { buildGithubReportCard } from "../../cards/githubReportCard";
 import { buildRepoPassportCard } from "../../cards/repoPassportCard";
 import { buildRepoWantedPosterCard } from "../../cards/repoWantedPosterCard";
@@ -34,7 +35,18 @@ const REPO_NAME_PATTERN = /^[\w.-]+\/[\w.-]+$/;
 
 const statsConfigSchema = z.object({
   layout: z
-    .enum(["full", "terminal", "radial", "badge", "tiles", "portrait", "trading-card", "rpg-sheet", "report-card"])
+    .enum([
+      "full",
+      "terminal",
+      "radial",
+      "badge",
+      "tiles",
+      "portrait",
+      "trading-card",
+      "rpg-sheet",
+      "rpg-scroll",
+      "report-card",
+    ])
     .default("full"),
 });
 

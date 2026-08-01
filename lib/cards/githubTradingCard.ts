@@ -9,6 +9,9 @@ const PADDING = 16;
 const PHOTO_Y = 46;
 const PHOTO_HEIGHT = 148;
 const STAT_ROW_HEIGHT = 26;
+// Extra canvas margin so the halo glow has room to bleed past the card's own border
+// instead of being clipped at the SVG edge.
+const HALO_MARGIN = 26;
 
 type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
@@ -18,6 +21,14 @@ const RARITY_COLOR: Record<Rarity, string> = {
   rare: "#38bdf8",
   epic: "#a855f7",
   legendary: "#f4c542",
+};
+
+const HALO_STYLE: Record<Rarity, { opacity: number; blur: number; pulse: boolean }> = {
+  common: { opacity: 0.12, blur: 6, pulse: false },
+  uncommon: { opacity: 0.22, blur: 8, pulse: false },
+  rare: { opacity: 0.32, blur: 10, pulse: false },
+  epic: { opacity: 0.45, blur: 13, pulse: true },
+  legendary: { opacity: 0.6, blur: 17, pulse: true },
 };
 
 function rarityFor(score: number): Rarity {
@@ -71,8 +82,11 @@ export function buildGithubTradingCard(profile: GithubProfile, repos: GithubRepo
     .join("\n  ");
 
   const footerY = statsY + stats.length * STAT_ROW_HEIGHT + 8;
+  const halo = HALO_STYLE[rarity];
+  const canvasWidth = WIDTH + HALO_MARGIN * 2;
+  const canvasHeight = HEIGHT + HALO_MARGIN * 2;
 
-  return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${login} — ${rarity} developer card">
+  return `<svg width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${login} — ${rarity} developer card">
   <title>${login} — ${rarity.toUpperCase()} developer card</title>
   <defs>
     <clipPath id="tcPhoto"><rect x="${PADDING}" y="${PHOTO_Y}" width="${WIDTH - PADDING * 2}" height="${PHOTO_HEIGHT}" rx="10" /></clipPath>
@@ -80,6 +94,9 @@ export function buildGithubTradingCard(profile: GithubProfile, repos: GithubRepo
       <stop offset="0" stop-color="${rarityColor}" stop-opacity="0.22" />
       <stop offset="0.35" stop-color="${theme.background}" stop-opacity="1" />
     </linearGradient>
+    <filter id="tcHalo" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="${halo.blur}" />
+    </filter>
     ${thumbShadowFilter()}
     <style>
       .name { font: 700 16px 'Segoe UI', Helvetica, Arial, sans-serif; fill: ${theme.primaryText}; }
@@ -92,33 +109,39 @@ export function buildGithubTradingCard(profile: GithubProfile, repos: GithubRepo
     </style>
   </defs>
 
-  <rect x="2" y="2" width="${WIDTH - 4}" height="${HEIGHT - 4}" rx="20" fill="url(#tcBg)" stroke="${rarityColor}" stroke-width="3" />
-  <rect x="7" y="7" width="${WIDTH - 14}" height="${HEIGHT - 14}" rx="15" fill="none" stroke="${rarityColor}" stroke-opacity="0.4" />
+  <rect x="${HALO_MARGIN + 2}" y="${HALO_MARGIN + 2}" width="${WIDTH - 4}" height="${HEIGHT - 4}" rx="24" fill="${rarityColor}" opacity="${halo.opacity}" filter="url(#tcHalo)">
+    ${halo.pulse ? `<animate attributeName="opacity" values="${halo.opacity};${halo.opacity * 0.55};${halo.opacity}" dur="2.4s" repeatCount="indefinite" />` : ""}
+  </rect>
 
-  <text x="${PADDING}" y="30" class="name">${login}</text>
-  <g transform="translate(${WIDTH - PADDING - rarity.length * 6.6 - 20}, 18)">
-    <rect width="${rarity.length * 6.6 + 20}" height="18" rx="9" fill="${rarityColor}" fill-opacity="0.2" />
-    <text x="${(rarity.length * 6.6 + 20) / 2}" y="13" text-anchor="middle" class="rarity" fill="${rarityColor}">${rarity.toUpperCase()}</text>
+  <g transform="translate(${HALO_MARGIN}, ${HALO_MARGIN})">
+    <rect x="2" y="2" width="${WIDTH - 4}" height="${HEIGHT - 4}" rx="20" fill="url(#tcBg)" stroke="${rarityColor}" stroke-width="3" />
+    <rect x="7" y="7" width="${WIDTH - 14}" height="${HEIGHT - 14}" rx="15" fill="none" stroke="${rarityColor}" stroke-opacity="0.4" />
+
+    <text x="${PADDING}" y="30" class="name">${login}</text>
+    <g transform="translate(${WIDTH - PADDING - rarity.length * 6.6 - 20}, 18)">
+      <rect width="${rarity.length * 6.6 + 20}" height="18" rx="9" fill="${theme.background}" fill-opacity="0.75" stroke="${rarityColor}" stroke-opacity="0.5" />
+      <text x="${(rarity.length * 6.6 + 20) / 2}" y="13" text-anchor="middle" class="rarity" fill="${rarityColor}">${rarity.toUpperCase()}</text>
+    </g>
+
+    <g filter="url(#thumbShadow)">
+      ${avatar
+        ? `<image href="${avatar}" x="${PADDING}" y="${PHOTO_Y}" width="${WIDTH - PADDING * 2}" height="${PHOTO_HEIGHT}" clip-path="url(#tcPhoto)" preserveAspectRatio="xMidYMid slice" />`
+        : `<rect x="${PADDING}" y="${PHOTO_Y}" width="${WIDTH - PADDING * 2}" height="${PHOTO_HEIGHT}" rx="10" fill="${theme.border}" />
+        <g transform="translate(${WIDTH / 2 - 6}, ${PHOTO_Y + PHOTO_HEIGHT / 2 - 7})">${appGlyph(theme.secondaryText)}</g>`}
+    </g>
+    <rect x="${PADDING + 0.5}" y="${PHOTO_Y + 0.5}" width="${WIDTH - PADDING * 2 - 1}" height="${PHOTO_HEIGHT - 1}" rx="10" fill="none" stroke="${rarityColor}" stroke-opacity="0.6" stroke-width="2" />
+
+    <text x="${WIDTH / 2}" y="${PHOTO_Y + PHOTO_HEIGHT + 22}" text-anchor="middle" class="class-name">${className}</text>
+
+    <line x1="${PADDING}" y1="${statsY - 12}" x2="${WIDTH - PADDING}" y2="${statsY - 12}" stroke="${rarityColor}" stroke-opacity="0.3" />
+    ${statRows}
+
+    <line x1="${PADDING}" y1="${footerY}" x2="${WIDTH - PADDING}" y2="${footerY}" stroke="${theme.border}" stroke-opacity="0.6" />
+    <g transform="translate(${PADDING}, ${footerY + 8})" opacity="0.85">
+      ${appGlyph(theme.secondaryText)}
+      <text x="18" y="12" class="brand">README CARDS</text>
+    </g>
+    <text x="${WIDTH - PADDING}" y="${footerY + 20}" text-anchor="end" class="score">SCORE ${overallScore}</text>
   </g>
-
-  <g filter="url(#thumbShadow)">
-    ${avatar
-      ? `<image href="${avatar}" x="${PADDING}" y="${PHOTO_Y}" width="${WIDTH - PADDING * 2}" height="${PHOTO_HEIGHT}" clip-path="url(#tcPhoto)" preserveAspectRatio="xMidYMid slice" />`
-      : `<rect x="${PADDING}" y="${PHOTO_Y}" width="${WIDTH - PADDING * 2}" height="${PHOTO_HEIGHT}" rx="10" fill="${theme.border}" />
-      <g transform="translate(${WIDTH / 2 - 6}, ${PHOTO_Y + PHOTO_HEIGHT / 2 - 7})">${appGlyph(theme.secondaryText)}</g>`}
-  </g>
-  <rect x="${PADDING + 0.5}" y="${PHOTO_Y + 0.5}" width="${WIDTH - PADDING * 2 - 1}" height="${PHOTO_HEIGHT - 1}" rx="10" fill="none" stroke="${rarityColor}" stroke-opacity="0.6" stroke-width="2" />
-
-  <text x="${WIDTH / 2}" y="${PHOTO_Y + PHOTO_HEIGHT + 22}" text-anchor="middle" class="class-name">${className}</text>
-
-  <line x1="${PADDING}" y1="${statsY - 12}" x2="${WIDTH - PADDING}" y2="${statsY - 12}" stroke="${rarityColor}" stroke-opacity="0.3" />
-  ${statRows}
-
-  <line x1="${PADDING}" y1="${footerY}" x2="${WIDTH - PADDING}" y2="${footerY}" stroke="${theme.border}" stroke-opacity="0.6" />
-  <g transform="translate(${PADDING}, ${footerY + 8})" opacity="0.85">
-    ${appGlyph(theme.secondaryText)}
-    <text x="18" y="12" class="brand">README CARDS</text>
-  </g>
-  <text x="${WIDTH - PADDING}" y="${footerY + 20}" text-anchor="end" class="score">SCORE ${overallScore}</text>
 </svg>`;
 }
