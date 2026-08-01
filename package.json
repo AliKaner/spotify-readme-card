@@ -26,11 +26,16 @@
   "dependencies": {
     "@auth/core": "^0.41.3",
     "@convex-dev/auth": "^0.0.94",
+    "@tailwindcss/postcss": "^4.3.3",
     "convex": "^1.43.0",
+    "geist": "^1.7.2",
+    "lucide-react": "^1.28.0",
     "nanoid": "^5.1.16",
     "next": "^16.2.12",
+    "postcss": "^8.5.25",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tailwindcss": "^4.3.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {

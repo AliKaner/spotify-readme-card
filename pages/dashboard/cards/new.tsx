@@ -1,13 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { authFetch } from "../../../lib/authFetch";
 import { themes } from "../../../lib/themes";
+import { Layout } from "../../../components/Layout";
+import { Card } from "../../../components/ui/Card";
+import { Button } from "../../../components/ui/Button";
 
 const THEME_OPTIONS = Object.keys(themes);
-const fieldStyle = { display: "block", width: "100%", marginTop: 4, padding: 8 };
+const fieldClass =
+  "mt-1.5 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-accent focus:outline-none";
+const labelClass = "block text-sm font-medium";
 
 export default function NewCard() {
   const router = useRouter();
@@ -31,19 +37,23 @@ export default function NewCard() {
 
   if (isLoading || !isAuthenticated || connection === undefined) {
     return (
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <p style={{ color: "#b3b3b3" }}>Loading…</p>
-      </main>
+      <Layout>
+        <p className="text-text-muted">Loading…</p>
+      </Layout>
     );
   }
 
   if (!connection) {
     return (
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <p>
-          Connect Spotify from the <a href="/dashboard">dashboard</a> before creating a card.
+      <Layout>
+        <p className="text-text-muted">
+          Connect Spotify from the{" "}
+          <a href="/dashboard" className="text-accent underline underline-offset-4">
+            dashboard
+          </a>{" "}
+          before creating a card.
         </p>
-      </main>
+      </Layout>
     );
   }
 
@@ -71,70 +81,68 @@ export default function NewCard() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "48px 20px" }}>
-      <h1 style={{ fontSize: 22, marginBottom: 24 }}>New card</h1>
-      <form onSubmit={handleSubmit}>
-        <label style={{ display: "block", marginBottom: 16 }}>
-          Card type
-          <select value={type} onChange={(e) => setType(e.target.value as "now-playing" | "top-tracks")} style={fieldStyle}>
-            <option value="now-playing">Now Playing</option>
-            <option value="top-tracks">Top Tracks</option>
-          </select>
-        </label>
+    <>
+      <Head>
+        <title>New card — README Cards</title>
+      </Head>
+      <Layout>
+        <h1 className="text-2xl font-semibold">New card</h1>
+        <p className="mt-1 text-text-muted">Pick a card type, a theme, and any options.</p>
 
-        <label style={{ display: "block", marginBottom: 16 }}>
-          Theme
-          <select value={theme} onChange={(e) => setTheme(e.target.value)} style={fieldStyle}>
-            {THEME_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {type === "top-tracks" && (
-          <>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              Time range
-              <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} style={fieldStyle}>
-                <option value="short_term">Last 4 weeks</option>
-                <option value="medium_term">Last 6 months</option>
-                <option value="long_term">All time</option>
+        <Card className="mt-8 max-w-md">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <label className={labelClass}>
+              Card type
+              <select value={type} onChange={(e) => setType(e.target.value as "now-playing" | "top-tracks")} className={fieldClass}>
+                <option value="now-playing">Now Playing</option>
+                <option value="top-tracks">Top Tracks</option>
               </select>
             </label>
 
-            <label style={{ display: "block", marginBottom: 16 }}>
-              Number of tracks
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                style={fieldStyle}
-              />
+            <label className={labelClass}>
+              Theme
+              <select value={theme} onChange={(e) => setTheme(e.target.value)} className={fieldClass}>
+                {THEME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </label>
-          </>
-        )}
 
-        {error && <p style={{ color: "#e5484d", marginBottom: 16 }}>{error}</p>}
+            {type === "top-tracks" && (
+              <>
+                <label className={labelClass}>
+                  Time range
+                  <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className={fieldClass}>
+                    <option value="short_term">Last 4 weeks</option>
+                    <option value="medium_term">Last 6 months</option>
+                    <option value="long_term">All time</option>
+                  </select>
+                </label>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            padding: "10px 18px",
-            background: "#1db954",
-            color: "#000",
-            border: "none",
-            borderRadius: 8,
-            fontWeight: 600,
-          }}
-        >
-          {submitting ? "Creating…" : "Create card"}
-        </button>
-      </form>
-    </main>
+                <label className={labelClass}>
+                  Number of tracks
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={limit}
+                    onChange={(e) => setLimit(Number(e.target.value))}
+                    className={fieldClass}
+                  />
+                </label>
+              </>
+            )}
+
+            {error && <p className="text-sm text-red-400">{error}</p>}
+
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? "Creating…" : "Create card"}
+            </Button>
+          </form>
+        </Card>
+      </Layout>
+    </>
   );
 }

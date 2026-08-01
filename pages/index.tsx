@@ -1,6 +1,11 @@
 import Head from "next/head";
 import type { GetServerSideProps } from "next";
 import { useConvexAuth } from "@convex-dev/auth/react";
+import { LogIn, ArrowRight, Music2, Clock3, Radio, BarChart3, Sparkles } from "lucide-react";
+import { Layout } from "../components/Layout";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
+import { LinkButton } from "../components/ui/Button";
 import { listProviders, type MarketplaceEntry } from "../lib/providers/registry";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://your-deployment.vercel.app";
@@ -14,6 +19,13 @@ interface Props {
 
 export const getServerSideProps: GetServerSideProps<Props> = async () => {
   return { props: { providers: listProviders() } };
+};
+
+const PROVIDER_ICONS: Record<string, typeof Music2> = {
+  spotify: Music2,
+  wakatime: Clock3,
+  lastfm: Radio,
+  "github-stats": BarChart3,
 };
 
 export default function Home({ providers }: Props) {
@@ -41,57 +53,57 @@ export default function Home({ providers }: Props) {
         <meta name="twitter:description" content={DESCRIPTION} />
       </Head>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <h1 style={{ fontSize: 28, marginBottom: 8 }}>🧩 README Card Marketplace</h1>
-        <p style={{ color: "#b3b3b3", lineHeight: 1.6, marginBottom: 24 }}>
-          Sign in with GitHub, connect the services you use, build a live SVG card from
-          ready-made themes, and get a stable link to embed in your GitHub profile README.
-        </p>
-
-        <a
-          href={showDashboardLink ? "/dashboard" : "/signin"}
-          style={{
-            display: "inline-block",
-            padding: "12px 22px",
-            background: "#1db954",
-            color: "#000",
-            borderRadius: 8,
-            fontWeight: 600,
-            textDecoration: "none",
-            marginBottom: 40,
-          }}
-        >
-          {showDashboardLink ? "Go to dashboard" : "Sign in with GitHub"}
-        </a>
-
-        <section>
-          <h2 style={{ fontSize: 18, marginBottom: 12 }}>Integrations</h2>
-          <ul style={{ listStyle: "none", padding: 0, display: "grid", gap: 8 }}>
-            {providers.map((p) => (
-              <li
-                key={p.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "10px 14px",
-                  border: "1px solid #2a2a2a",
-                  borderRadius: 8,
-                }}
-              >
-                <span>{p.displayName}</span>
-                <span style={{ color: p.status === "live" ? "#1db954" : "#666", fontSize: 13 }}>
-                  {p.status === "live" ? "Available" : "Coming soon"}
-                </span>
-              </li>
-            ))}
-          </ul>
+      <Layout>
+        <section className="bg-glow -mx-6 rounded-3xl px-6 py-20 text-center sm:py-28">
+          <Badge tone="accent" className="mb-5">
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            Now a multi-provider marketplace
+          </Badge>
+          <h1 className="mx-auto max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            Live cards for your GitHub README, built in seconds
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-balance text-text-muted">
+            Connect Spotify — more services soon — pick a theme, and drop a stable,
+            always-fresh SVG straight into your profile. No third party in the middle of
+            your data.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <LinkButton href={showDashboardLink ? "/dashboard" : "/signin"} className="px-6 py-3 text-base">
+              {showDashboardLink ? (
+                <>
+                  Go to dashboard <ArrowRight className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" /> Sign in with GitHub
+                </>
+              )}
+            </LinkButton>
+          </div>
         </section>
 
-        <p style={{ color: "#666", marginTop: 40 }}>
-          Self-hosted and open source — see <code>README.md</code> in the repository for setup
-          instructions.
-        </p>
-      </main>
+        <section className="mt-20">
+          <h2 className="mb-6 text-lg font-semibold">Integrations</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {providers.map((p) => {
+              const Icon = PROVIDER_ICONS[p.id] ?? Sparkles;
+              return (
+                <Card key={p.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-hover">
+                      <Icon className="h-5 w-5 text-text-muted" />
+                    </div>
+                    <span className="font-medium">{p.displayName}</span>
+                  </div>
+                  <Badge tone={p.status === "live" ? "accent" : "muted"}>
+                    {p.status === "live" ? "Available" : "Coming soon"}
+                  </Badge>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      </Layout>
     </>
   );
 }

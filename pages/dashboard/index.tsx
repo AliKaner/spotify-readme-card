@@ -1,10 +1,14 @@
 import { useEffect } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
-import Link from "next/link";
 import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { Music2, CheckCircle2, ArrowRight } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { authFetch } from "../../lib/authFetch";
+import { Layout } from "../../components/Layout";
+import { Card } from "../../components/ui/Card";
+import { Button, LinkButton } from "../../components/ui/Button";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -21,37 +25,48 @@ export default function Dashboard() {
 
   if (isLoading || !isAuthenticated || user === undefined) {
     return (
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <p style={{ color: "#b3b3b3" }}>Loading…</p>
-      </main>
+      <Layout>
+        <p className="text-text-muted">Loading…</p>
+      </Layout>
     );
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-        {user?.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt={user.name ?? "avatar"} width={40} height={40} style={{ borderRadius: "50%" }} />
-        )}
-        <h1 style={{ fontSize: 22 }}>Welcome, {user?.name ?? "there"}</h1>
-      </div>
+    <>
+      <Head>
+        <title>Dashboard — README Cards</title>
+      </Head>
+      <Layout>
+        <h1 className="text-2xl font-semibold">Welcome, {user?.name ?? "there"}</h1>
+        <p className="mt-1 text-text-muted">Connect a service, then build a card from it.</p>
 
-      <section style={{ margin: "32px 0", padding: 20, border: "1px solid #2a2a2a", borderRadius: 12 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 8 }}>Spotify</h2>
-        {connection === undefined ? (
-          <p style={{ color: "#b3b3b3" }}>Loading…</p>
-        ) : connection ? (
-          <p style={{ color: "#1db954" }}>Connected as {connection.displayName}</p>
-        ) : (
-          <ConnectSpotifyButton />
-        )}
-      </section>
+        <Card className="mt-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-hover">
+              <Music2 className="h-5 w-5 text-text-muted" />
+            </div>
+            <h2 className="font-medium">Spotify</h2>
+          </div>
 
-      <Link href="/dashboard/cards" style={{ color: "#1db954" }}>
-        Manage your cards →
-      </Link>
-    </main>
+          <div className="mt-4">
+            {connection === undefined ? (
+              <p className="text-sm text-text-muted">Loading…</p>
+            ) : connection ? (
+              <p className="flex items-center gap-2 text-sm text-accent">
+                <CheckCircle2 className="h-4 w-4" />
+                Connected as {connection.displayName}
+              </p>
+            ) : (
+              <ConnectSpotifyButton />
+            )}
+          </div>
+        </Card>
+
+        <LinkButton href="/dashboard/cards" variant="secondary" className="mt-8">
+          Manage your cards <ArrowRight className="h-4 w-4" />
+        </LinkButton>
+      </Layout>
+    </>
   );
 }
 
@@ -67,23 +82,10 @@ function ConnectSpotifyButton() {
 
   return (
     <>
-      <p style={{ color: "#b3b3b3", marginBottom: 12 }}>
+      <p className="mb-3 text-sm text-text-muted">
         Connect your Spotify account to build now-playing and top-tracks cards.
       </p>
-      <button
-        onClick={handleClick}
-        style={{
-          padding: "10px 18px",
-          background: "#1db954",
-          color: "#000",
-          border: "none",
-          borderRadius: 8,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        Connect Spotify
-      </button>
+      <Button onClick={handleClick}>Connect Spotify</Button>
     </>
   );
 }

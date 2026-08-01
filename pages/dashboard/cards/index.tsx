@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
-import Link from "next/link";
 import { useConvexAuth, useAuthToken } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { Plus, Trash2, Copy, Check } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { authFetch } from "../../../lib/authFetch";
 import { getSiteUrl } from "../../../lib/env";
+import { Layout } from "../../../components/Layout";
+import { Card } from "../../../components/ui/Card";
+import { Badge } from "../../../components/ui/Badge";
+import { Button, LinkButton } from "../../../components/ui/Button";
 
 const SITE_URL = getSiteUrl();
 
@@ -29,63 +34,77 @@ export default function CardsList() {
 
   if (isLoading || !isAuthenticated || cards === undefined) {
     return (
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-        <p style={{ color: "#b3b3b3" }}>Loading…</p>
-      </main>
+      <Layout>
+        <p className="text-text-muted">Loading…</p>
+      </Layout>
     );
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22 }}>Your cards</h1>
-        <Link
-          href="/dashboard/cards/new"
-          style={{
-            padding: "8px 14px",
-            background: "#1db954",
-            color: "#000",
-            borderRadius: 8,
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          New card
-        </Link>
-      </div>
+    <>
+      <Head>
+        <title>Your cards — README Cards</title>
+      </Head>
+      <Layout>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Your cards</h1>
+          <LinkButton href="/dashboard/cards/new">
+            <Plus className="h-4 w-4" /> New card
+          </LinkButton>
+        </div>
 
-      {cards.length === 0 && <p style={{ color: "#b3b3b3" }}>No cards yet.</p>}
+        {cards.length === 0 && <p className="mt-8 text-text-muted">No cards yet.</p>}
 
-      {cards.map((card) => {
-        const url = `${SITE_URL}/api/card/${card.publicId}`;
-        const snippet = `[![${card.provider} ${card.type}](${url})](${SITE_URL})`;
-        return (
-          <section key={card._id} style={{ margin: "24px 0", padding: 16, border: "1px solid #2a2a2a", borderRadius: 12 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`${card.provider} ${card.type}`} style={{ maxWidth: "100%", marginBottom: 12 }} />
-            <p style={{ fontSize: 13, color: "#b3b3b3", marginBottom: 8 }}>
-              {card.type} · {card.theme}
-            </p>
-            <pre style={{ background: "#111", padding: 12, borderRadius: 8, overflowX: "auto", fontSize: 12 }}>
-              <code>{snippet}</code>
-            </pre>
-            <button
-              onClick={() => handleDelete(card._id)}
-              style={{
-                marginTop: 8,
-                padding: "6px 12px",
-                background: "transparent",
-                color: "#e5484d",
-                border: "1px solid #e5484d",
-                borderRadius: 6,
-                cursor: "pointer",
-              }}
-            >
-              Delete
-            </button>
-          </section>
-        );
-      })}
-    </main>
+        <div className="mt-8 space-y-5">
+          {cards.map((card) => {
+            const url = `${SITE_URL}/api/card/${card.publicId}`;
+            const snippet = `[![${card.provider} ${card.type}](${url})](${SITE_URL})`;
+            return (
+              <Card key={card._id}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`${card.provider} ${card.type}`} className="max-w-full rounded-lg" />
+
+                <div className="mt-4 flex items-center gap-2 text-sm text-text-muted">
+                  <span className="capitalize">{card.type.replace("-", " ")}</span>
+                  <span>·</span>
+                  <Badge>{card.theme}</Badge>
+                </div>
+
+                <div className="relative mt-3">
+                  <pre className="overflow-x-auto rounded-lg border border-border bg-bg p-3 pr-12 font-mono text-xs">
+                    <code>{snippet}</code>
+                  </pre>
+                  <CopyButton text={snippet} />
+                </div>
+
+                <Button variant="danger" onClick={() => handleDelete(card._id)} className="mt-4">
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              </Card>
+            );
+          })}
+        </div>
+      </Layout>
+    </>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label="Copy embed snippet"
+      className="absolute right-2.5 top-2.5 rounded-md p-1.5 text-text-muted transition hover:bg-surface-hover hover:text-text"
+    >
+      {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
+    </button>
   );
 }
