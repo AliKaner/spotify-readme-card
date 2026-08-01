@@ -4,11 +4,21 @@ const SPOTIFY_AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const SPOTIFY_TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
 const SPOTIFY_ME_ENDPOINT = "https://api.spotify.com/v1/me";
 const NOW_PLAYING_ENDPOINT = "https://api.spotify.com/v1/me/player/currently-playing";
-const RECENTLY_PLAYED_ENDPOINT = "https://api.spotify.com/v1/me/player/recently-played?limit=1";
+const RECENTLY_PLAYED_ENDPOINT = "https://api.spotify.com/v1/me/player/recently-played";
 const TOP_TRACKS_ENDPOINT = "https://api.spotify.com/v1/me/top/tracks";
 const TOP_ARTISTS_ENDPOINT = "https://api.spotify.com/v1/me/top/artists";
+const AUDIO_FEATURES_ENDPOINT = "https://api.spotify.com/v1/audio-features";
+const SEARCH_ENDPOINT = "https://api.spotify.com/v1/search";
+const TRACKS_ENDPOINT = "https://api.spotify.com/v1/tracks";
+const ARTISTS_ENDPOINT = "https://api.spotify.com/v1/artists";
+const PLAYLISTS_ENDPOINT = "https://api.spotify.com/v1/playlists";
 
-export const SPOTIFY_SCOPES = ["user-read-currently-playing", "user-read-recently-played", "user-top-read"].join(" ");
+export const SPOTIFY_SCOPES = [
+  "user-read-currently-playing",
+  "user-read-recently-played",
+  "user-top-read",
+  "playlist-read-private",
+].join(" ");
 
 export interface Track {
   isPlaying: boolean;
@@ -20,17 +30,39 @@ export interface Track {
 }
 
 export interface TopTrack {
+  id: string;
   title: string;
   artist: string;
   albumImageUrl?: string;
   songUrl: string;
 }
 
+export interface RecentTrack {
+  title: string;
+  artist: string;
+  albumImageUrl?: string;
+  songUrl: string;
+  playedAt: string;
+}
+
 export interface TopArtist {
   name: string;
   genre?: string;
+  genres: string[];
   imageUrl?: string;
   artistUrl: string;
+}
+
+export interface GenreCount {
+  genre: string;
+  count: number;
+}
+
+export interface AudioFeaturesAverage {
+  energy: number;
+  danceability: number;
+  valence: number;
+  tempo: number;
 }
 
 export type TimeRange = "short_term" | "medium_term" | "long_term";
@@ -149,7 +181,7 @@ function mapTrackItem(item: any, isPlaying: boolean): Track {
 }
 
 async function getRecentlyPlayed(accessToken: string): Promise<Track | null> {
-  const response = await fetch(RECENTLY_PLAYED_ENDPOINT, {
+  const response = await fetch(`${RECENTLY_PLAYED_ENDPOINT}?limit=1`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
@@ -197,10 +229,31 @@ export async function getTopTracks(
 
   const data = await response.json();
   return (data.items ?? []).map((item: any) => ({
+    id: item.id,
     title: item.name,
     artist: (item.artists ?? []).map((a: any) => a.name).join(", "),
     albumImageUrl: item.album?.images?.[0]?.url,
     songUrl: item.external_urls?.spotify ?? "",
+  }));
+}
+
+export async function getRecentlyPlayedList(accessToken: string, limit = 5): Promise<RecentTrack[]> {
+  const url = new URL(RECENTLY_PLAYED_ENDPOINT);
+  url.searchParams.set("limit", String(Math.min(Math.max(limit, 1), 10)));
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return (data.items ?? []).map((entry: any) => ({
+    title: entry.track?.name,
+    artist: (entry.track?.artists ?? []).map((a: any) => a.name).join(", "),
+    albumImageUrl: entry.track?.album?.images?.[0]?.url,
+    songUrl: entry.track?.external_urls?.spotify ?? "",
+    playedAt: entry.played_at,
   }));
 }
 
@@ -223,7 +276,199 @@ export async function getTopArtists(
   return (data.items ?? []).map((item: any) => ({
     name: item.name,
     genre: item.genres?.[0],
+    genres: item.genres ?? [],
     imageUrl: item.images?.[0]?.url,
     artistUrl: item.external_urls?.spotify ?? "",
   }));
+}
+
+export function computeTopGenres(artists: TopArtist[], limit = 5): GenreCount[] {
+  const counts = new Map<string, number>();
+  for (const artist of artists) {
+    for (const genre of artist.genres) {
+      counts.set(genre, (counts.get(genre) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([genre, count]) => ({ genre, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
+export async function getAudioFeaturesAverage(accessToken: string, trackIds: string[]): Promise<AudioFeaturesAverage | null> {
+  if (trackIds.length === 0) return null;
+
+  const url = new URL(AUDIO_FEATURES_ENDPOINT);
+  url.searchParams.set("ids", trackIds.slice(0, 100).join(","));
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const features = (data.audio_features ?? []).filter(Boolean);
+  if (features.length === 0) return null;
+
+  const sum = features.reduce(
+    (acc: AudioFeaturesAverage, f: any) => ({
+      energy: acc.energy + f.energy,
+      danceability: acc.danceability + f.danceability,
+      valence: acc.valence + f.valence,
+      tempo: acc.tempo + f.tempo,
+    }),
+    { energy: 0, danceability: 0, valence: 0, tempo: 0 }
+  );
+
+  return {
+    energy: sum.energy / features.length,
+    danceability: sum.danceability / features.length,
+    valence: sum.valence / features.length,
+    tempo: sum.tempo / features.length,
+  };
+}
+
+export interface SearchResultTrack {
+  id: string;
+  title: string;
+  artist: string;
+  imageUrl?: string;
+}
+
+export interface SearchResultArtist {
+  id: string;
+  name: string;
+  imageUrl?: string;
+}
+
+export interface SearchResultPlaylist {
+  id: string;
+  name: string;
+  owner: string;
+  imageUrl?: string;
+}
+
+export type SearchType = "track" | "artist" | "playlist";
+
+/** Used to power the "feature a specific item" card picker — searches Spotify's public catalog. */
+export async function searchSpotify(
+  accessToken: string,
+  query: string,
+  type: SearchType,
+  limit = 8
+): Promise<(SearchResultTrack | SearchResultArtist | SearchResultPlaylist)[]> {
+  if (!query.trim()) return [];
+
+  const url = new URL(SEARCH_ENDPOINT);
+  url.searchParams.set("q", query);
+  url.searchParams.set("type", type);
+  url.searchParams.set("limit", String(Math.min(Math.max(limit, 1), 20)));
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return [];
+
+  const data = await response.json();
+
+  if (type === "track") {
+    return (data.tracks?.items ?? []).map((item: any) => ({
+      id: item.id,
+      title: item.name,
+      artist: (item.artists ?? []).map((a: any) => a.name).join(", "),
+      imageUrl: item.album?.images?.[0]?.url,
+    }));
+  }
+
+  if (type === "artist") {
+    return (data.artists?.items ?? []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      imageUrl: item.images?.[0]?.url,
+    }));
+  }
+
+  return (data.playlists?.items ?? [])
+    .filter(Boolean)
+    .map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      owner: item.owner?.display_name ?? "",
+      imageUrl: item.images?.[0]?.url,
+    }));
+}
+
+export interface FeaturedTrack {
+  title: string;
+  artist: string;
+  album: string;
+  albumImageUrl?: string;
+  songUrl: string;
+}
+
+export async function getTrackById(accessToken: string, trackId: string): Promise<FeaturedTrack | null> {
+  const response = await fetch(`${TRACKS_ENDPOINT}/${encodeURIComponent(trackId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return null;
+
+  const item = await response.json();
+  return {
+    title: item.name,
+    artist: (item.artists ?? []).map((a: any) => a.name).join(", "),
+    album: item.album?.name ?? "",
+    albumImageUrl: item.album?.images?.[0]?.url,
+    songUrl: item.external_urls?.spotify ?? "",
+  };
+}
+
+export interface FeaturedArtist {
+  name: string;
+  genres: string[];
+  imageUrl?: string;
+  followers?: number;
+  artistUrl: string;
+}
+
+export async function getArtistById(accessToken: string, artistId: string): Promise<FeaturedArtist | null> {
+  const response = await fetch(`${ARTISTS_ENDPOINT}/${encodeURIComponent(artistId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return null;
+
+  const item = await response.json();
+  return {
+    name: item.name,
+    genres: item.genres ?? [],
+    imageUrl: item.images?.[0]?.url,
+    followers: item.followers?.total,
+    artistUrl: item.external_urls?.spotify ?? "",
+  };
+}
+
+export interface FeaturedPlaylist {
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  trackCount: number;
+  owner: string;
+  playlistUrl: string;
+}
+
+export async function getPlaylistById(accessToken: string, playlistId: string): Promise<FeaturedPlaylist | null> {
+  const response = await fetch(`${PLAYLISTS_ENDPOINT}/${encodeURIComponent(playlistId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return null;
+
+  const item = await response.json();
+  return {
+    name: item.name,
+    description: item.description || undefined,
+    imageUrl: item.images?.[0]?.url,
+    trackCount: item.tracks?.total ?? 0,
+    owner: item.owner?.display_name ?? "",
+    playlistUrl: item.external_urls?.spotify ?? "",
+  };
 }
