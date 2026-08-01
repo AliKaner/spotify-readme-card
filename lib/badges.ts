@@ -43,7 +43,7 @@ function evaluateTiers<T>(value: T, icon: BadgeIcon, source: BadgeSource, rules:
   return [{ id: bronze.id, label: bronze.label, description: bronze.description, icon, source, tier: "bronze", earned: false, progress }];
 }
 
-export function computeGithubBadges(profile: GithubProfile, repos: GithubRepo[]): Badge[] {
+export function computeGithubBadges(profile: GithubProfile, repos: GithubRepo[], hasRecentPush: boolean): Badge[] {
   const badges: Badge[] = [];
   const accountAgeYears = (Date.now() - new Date(profile.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000);
 
@@ -134,6 +134,82 @@ export function computeGithubBadges(profile: GithubProfile, repos: GithubRepo[])
     )
   );
 
+  badges.push(
+    ...evaluateTiers(
+      profile.following,
+      "users",
+      "github",
+      [
+        { tier: "bronze", id: "networker", label: "Networker", description: "Follow 25+ other GitHub users.", test: (v) => v >= 25 },
+        { tier: "silver", id: "connector", label: "Connector", description: "Follow 100+ other GitHub users.", test: (v) => v >= 100 },
+        { tier: "gold", id: "community-builder", label: "Community Builder", description: "Follow 300+ other GitHub users.", test: (v) => v >= 300 },
+      ],
+      `${profile.following} following`
+    )
+  );
+
+  badges.push(
+    ...evaluateTiers(
+      profile.publicGists,
+      "book",
+      "github",
+      [
+        { tier: "bronze", id: "gist-author", label: "Gist Author", description: "Publish 5+ public gists.", test: (v) => v >= 5 },
+        { tier: "silver", id: "snippet-sharer", label: "Snippet Sharer", description: "Publish 20+ public gists.", test: (v) => v >= 20 },
+        { tier: "gold", id: "gist-hoarder", label: "Gist Hoarder", description: "Publish 60+ public gists.", test: (v) => v >= 60 },
+      ],
+      `${profile.publicGists} gists`
+    )
+  );
+
+  const originalRepoCount = repos.filter((r) => !r.isFork).length;
+  badges.push(
+    ...evaluateTiers(
+      originalRepoCount,
+      "code",
+      "github",
+      [
+        { tier: "bronze", id: "original-creator", label: "Original Creator", description: "Have 10+ repos that aren't forks.", test: (v) => v >= 10 },
+        { tier: "silver", id: "prolific-creator", label: "Prolific Creator", description: "Have 40+ repos that aren't forks.", test: (v) => v >= 40 },
+        { tier: "gold", id: "serial-creator", label: "Serial Creator", description: "Have 150+ repos that aren't forks.", test: (v) => v >= 150 },
+      ],
+      `${originalRepoCount} original repos`
+    )
+  );
+
+  const flagshipStars = Math.max(0, ...repos.filter((r) => !r.isFork).map((r) => r.stars));
+  badges.push(
+    ...evaluateTiers(
+      flagshipStars,
+      "star",
+      "github",
+      [
+        { tier: "bronze", id: "flagship-project", label: "Flagship Project", description: "Have a single repo with 100+ stars.", test: (v) => v >= 100 },
+        { tier: "silver", id: "breakout-project", label: "Breakout Project", description: "Have a single repo with 500+ stars.", test: (v) => v >= 500 },
+        { tier: "gold", id: "viral-project", label: "Viral Project", description: "Have a single repo with 2,000+ stars.", test: (v) => v >= 2000 },
+      ],
+      `${flagshipStars} stars`
+    )
+  );
+
+  badges.push({
+    id: "on-a-roll",
+    label: "On a Roll",
+    description: "Push a commit to a public repo within the last 7 days.",
+    icon: "repeat",
+    source: "github",
+    earned: hasRecentPush,
+  });
+
+  badges.push({
+    id: "early-adopter",
+    label: "Early Adopter",
+    description: "Join GitHub before 2013.",
+    icon: "calendar",
+    source: "github",
+    earned: new Date(profile.createdAt).getUTCFullYear() < 2013,
+  });
+
   return badges;
 }
 
@@ -142,6 +218,10 @@ export function computeSpotifyBadges(args: {
   playlistCount: number;
   sameTopArtistAcrossRanges: boolean;
   nightOwlRatio: number;
+  topTrackArtistDiversity: number;
+  hasRepeatedTrack: boolean;
+  weekendRatio: number;
+  earlyRiserRatio: number;
 }): Badge[] {
   const badges: Badge[] = [];
 
@@ -190,6 +270,49 @@ export function computeSpotifyBadges(args: {
     source: "spotify",
     earned: args.nightOwlRatio >= 0.5,
     progress: `${Math.round(args.nightOwlRatio * 100)}% late-night`,
+  });
+
+  badges.push(
+    ...evaluateTiers(
+      args.topTrackArtistDiversity,
+      "globe",
+      "spotify",
+      [
+        { tier: "bronze", id: "track-curator", label: "Track Curator", description: "Have 4+ different artists in your top 10 tracks.", test: (v) => v >= 4 },
+        { tier: "silver", id: "eclectic-ear", label: "Eclectic Ear", description: "Have 7+ different artists in your top 10 tracks.", test: (v) => v >= 7 },
+        { tier: "gold", id: "no-favorites", label: "No Favorites", description: "Have 10 different artists in your top 10 tracks.", test: (v) => v >= 10 },
+      ],
+      `${args.topTrackArtistDiversity}/10 artists`
+    )
+  );
+
+  badges.push({
+    id: "on-repeat",
+    label: "On Repeat",
+    description: "Play the same track twice or more in your recent history.",
+    icon: "repeat",
+    source: "spotify",
+    earned: args.hasRepeatedTrack,
+  });
+
+  badges.push({
+    id: "weekend-warrior",
+    label: "Weekend Warrior",
+    description: "Have most of your recent listens happen on a weekend.",
+    icon: "calendar",
+    source: "spotify",
+    earned: args.weekendRatio >= 0.5,
+    progress: `${Math.round(args.weekendRatio * 100)}% weekend`,
+  });
+
+  badges.push({
+    id: "early-riser",
+    label: "Early Riser",
+    description: "Have most of your recent listens happen in the early morning (5–9am).",
+    icon: "star",
+    source: "spotify",
+    earned: args.earlyRiserRatio >= 0.4,
+    progress: `${Math.round(args.earlyRiserRatio * 100)}% early morning`,
   });
 
   return badges;

@@ -12,6 +12,7 @@ import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { SpotifySearchPicker, type PickerItem, type PickerType } from "../../../components/SpotifySearchPicker";
 import { SOCIAL_PLATFORMS } from "../../../lib/cards/socialPlatforms";
+import type { Badge as BadgeItem } from "../../../lib/badges";
 
 type CardType =
   | "now-playing"
@@ -236,6 +237,8 @@ export default function NewCard() {
   const [hobbyValue, setHobbyValue] = useState("");
   const [hobbyDescription, setHobbyDescription] = useState("");
   const [hobbyImageUrl, setHobbyImageUrl] = useState("");
+  const [badgeCatalog, setBadgeCatalog] = useState<BadgeItem[] | null>(null);
+  const [selectedBadgeIds, setSelectedBadgeIds] = useState<string[]>([]);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -265,6 +268,14 @@ export default function NewCard() {
   function selectProvider(providerId: ProviderId) {
     if (providerId === currentOption.provider) return;
     selectType(typesForProvider(providerId)[0].id);
+  }
+
+  function toggleBadge(id: string) {
+    setSelectedBadgeIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 9) return prev;
+      return [...prev, id];
+    });
   }
 
   function isCustomFormReady(): boolean {
@@ -317,8 +328,21 @@ export default function NewCard() {
         layout,
       };
     }
+    if (type === "badges") {
+      return { selectedIds: selectedBadgeIds.length > 0 ? selectedBadgeIds : undefined };
+    }
     return { layout };
   }
+
+  // The badges card has no arrow-cycled options — instead fetch the user's earned badges
+  // once so they can hand-pick which ones show up on the card.
+  useEffect(() => {
+    if (type !== "badges" || !token || badgeCatalog !== null) return;
+    authFetch(token, "/api/badges")
+      .then((res) => (res.ok ? res.json() : { badges: [] }))
+      .then((data) => setBadgeCatalog(data.badges ?? []))
+      .catch(() => setBadgeCatalog([]));
+  }, [type, token, badgeCatalog]);
 
   // Live preview: debounced fetch of the SVG for the current (unsaved) form state,
   // rendered via a blob URL so we can attach the auth token without exposing it in an
@@ -395,6 +419,7 @@ export default function NewCard() {
     hobbyValue,
     hobbyDescription,
     hobbyImageUrl,
+    selectedBadgeIds,
   ]);
 
   useEffect(() => {
@@ -519,6 +544,50 @@ export default function NewCard() {
                     onPrev={() => setLayout(cycleId(layoutOptionsFor(type), layout, -1))}
                     onNext={() => setLayout(cycleId(layoutOptionsFor(type), layout, 1))}
                   />
+                )}
+
+                {type === "badges" && (
+                  <div className="py-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm text-text-muted">Badges to show</span>
+                      <span className="text-xs text-text-muted">{selectedBadgeIds.length}/9 selected</span>
+                    </div>
+                    {badgeCatalog === null ? (
+                      <p className="text-sm text-text-muted">Loading your badges…</p>
+                    ) : badgeCatalog.filter((b) => b.earned).length === 0 ? (
+                      <p className="text-sm text-text-muted">
+                        You haven&apos;t earned any badges yet — check{" "}
+                        <a href="/dashboard/badges" className="text-accent underline underline-offset-4">
+                          Badges
+                        </a>{" "}
+                        for how to unlock them.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-2 text-xs text-text-muted">
+                          Leave none selected to automatically show your top achievements.
+                        </p>
+                        <div className="max-h-64 space-y-1 overflow-y-auto">
+                          {badgeCatalog
+                            .filter((b) => b.earned)
+                            .map((b) => (
+                              <label
+                                key={b.id}
+                                className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface-hover"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedBadgeIds.includes(b.id)}
+                                  onChange={() => toggleBadge(b.id)}
+                                  disabled={!selectedBadgeIds.includes(b.id) && selectedBadgeIds.length >= 9}
+                                />
+                                {b.label}
+                              </label>
+                            ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
 
                 {featuredPickerType && (

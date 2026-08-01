@@ -45,7 +45,7 @@ export function buildBadgesCard(badges: Badge[], theme: Theme, totalCount?: numb
       return `<g transform="translate(${x}, ${y})">
     <rect width="${cellSize}" height="${cellSize}" rx="14" fill="${ringColor}" fill-opacity="0.13" />
     <rect x="0.5" y="0.5" width="${cellSize - 1}" height="${cellSize - 1}" rx="14" fill="none" stroke="${ringColor}" stroke-opacity="0.55" />
-    <g transform="translate(${cellSize / 2 - 11}, ${cellSize / 2 - 15})">${badgeIcon(badge.icon, ringColor)}</g>
+    <g transform="translate(${cellSize / 2 - 10}, ${cellSize / 2 - 14})">${badgeIcon(badge.icon, ringColor)}</g>
     ${sourceMark}
     <text x="${cellSize / 2}" y="${cellSize + 17}" text-anchor="middle" class="badge-label">${label}</text>
   </g>`;
@@ -87,33 +87,38 @@ function badgeIcon(icon: BadgeIcon, accent: string): string {
   const stroke = `stroke="${accent}" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
   switch (icon) {
     case "star":
-      return `<path d="M11 1.5l3 6.3 6.9.9-5 4.9 1.2 6.9-6.1-3.3-6.1 3.3 1.2-6.9-5-4.9 6.9-.9z" fill="${accent}" />`;
+      // Precise 10-point star polygon (outer r=9, inner r=3.5, centered on 10,10) — no
+      // freehand bezier math, so it's guaranteed closed and centered.
+      return `<path d="M10 1 12.1 7.2 18.6 7.2 13.3 11.1 15.3 17.3 10 13.5 4.7 17.3 6.7 11.1 1.4 7.2 7.9 7.2Z" fill="${accent}" />`;
     case "trophy":
-      return `<path d="M5 3h12v3.5a6 6 0 01-12 0V3z" ${stroke} /><path d="M8.5 12.5v3.5h5v-3.5" ${stroke} />
-        <path d="M4 12h14" ${stroke} /><path d="M5 4.5H1.5v2A3.5 3.5 0 005 10M17 4.5h3.5v2A3.5 3.5 0 0117 10" ${stroke} />`;
+      return `<path d="M6 3h8v5a4 4 0 01-8 0V3z" fill="${accent}" />
+        <rect x="9" y="12" width="2" height="3" fill="${accent}" />
+        <rect x="6.5" y="15" width="7" height="2" rx="1" fill="${accent}" />
+        <path d="M6 4.5H3v2a3 3 0 003 3M14 4.5h3v2a3 3 0 01-3 3" ${stroke} />`;
     case "moon":
-      return `<path d="M15 2.8A9 9 0 106 20.8 9 9 0 0015 18a7.5 7.5 0 01-6.3-7.4A7.5 7.5 0 0115 2.8z" fill="${accent}" />
-        <circle cx="16.5" cy="6" r="1" fill="${accent}" /><circle cx="18.5" cy="9.5" r="0.6" fill="${accent}" />`;
+      // Lucide's verified "moon" crescent path, rescaled from a 24x24 to a 20x20 box.
+      return `<path d="M17.5 10.66A7.5 7.5 0 1 1 9.34 2.5 5.83 5.83 0 0 0 17.5 10.66Z" fill="${accent}" />`;
     case "repeat":
-      return `<path d="M4.5 9a6.5 6.5 0 0111-4.6" ${stroke} /><path d="M4.5 4.4v4.6h4.6" ${stroke} />
-        <path d="M17.5 13a6.5 6.5 0 01-11 4.6" ${stroke} /><path d="M17.5 17.6V13h-4.6" ${stroke} />`;
+      // Lucide's verified "repeat" glyph, rescaled from a 24x24 to a 20x20 box.
+      return `<path d="M14.17 1.67 17.5 5l-3.33 3.33" ${stroke} /><path d="M2.5 9.17v-.83a3.33 3.33 0 0 1 3.33-3.34h11.67" ${stroke} />
+        <path d="M5.83 18.33 2.5 15l3.33-3.33" ${stroke} /><path d="M17.5 10.83v.84a3.33 3.33 0 0 1-3.33 3.33H2.5" ${stroke} />`;
     case "globe":
-      return `<circle cx="11" cy="11" r="9" ${stroke} /><ellipse cx="11" cy="11" rx="3.8" ry="9" ${stroke} />
-        <line x1="2" y1="11" x2="20" y2="11" ${stroke} /><path d="M3.5 6.5h15M3.5 15.5h15" stroke="${accent}" stroke-width="1.1" fill="none" opacity="0.6" />`;
+      return `<circle cx="10" cy="10" r="8" ${stroke} /><ellipse cx="10" cy="10" rx="3.4" ry="8" ${stroke} />
+        <line x1="2" y1="10" x2="18" y2="10" ${stroke} />`;
     case "book":
-      return `<path d="M4 4.5c1.8-1 4.4-1 7 0v13c-2.6-1-5.2-1-7 0z" ${stroke} />
-        <path d="M18 4.5c-1.8-1-4.4-1-7 0v13c2.6-1 5.2-1 7 0z" ${stroke} />`;
+      return `<path d="M4 4c1.6-1 3.6-1 6 0v12c-2.4-1-4.4-1-6 0z" ${stroke} />
+        <path d="M16 4c-1.6-1-3.6-1-6 0v12c2.4-1 4.4-1 6 0z" ${stroke} />`;
     case "users":
-      return `<circle cx="7.5" cy="7" r="3.4" fill="${accent}" /><circle cx="15.5" cy="8.5" r="2.6" fill="${accent}" opacity="0.55" />
-        <path d="M2 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" ${stroke} /><path d="M14 20c0-3-1.7-5-4-5.4" ${stroke} />`;
+      return `<circle cx="10" cy="6.5" r="3.5" fill="${accent}" />
+        <path d="M2.5 19c0-4.7 3.4-8.5 7.5-8.5s7.5 3.8 7.5 8.5z" fill="${accent}" />`;
     case "calendar":
-      return `<rect x="2.5" y="4.5" width="17" height="15.5" rx="2.5" ${stroke} /><line x1="2.5" y1="9" x2="19.5" y2="9" ${stroke} />
-        <line x1="7" y1="2" x2="7" y2="6.5" ${stroke} /><line x1="15" y1="2" x2="15" y2="6.5" ${stroke} />
-        <path d="M6.5 13l1.4 1.4L10.5 11.8" stroke="${accent}" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+      return `<rect x="2" y="4" width="16" height="15" rx="2" ${stroke} /><line x1="2" y1="9" x2="18" y2="9" ${stroke} />
+        <line x1="6.5" y1="1.5" x2="6.5" y2="6" ${stroke} /><line x1="13.5" y1="1.5" x2="13.5" y2="6" ${stroke} />
+        <path d="M6.5 13l1.4 1.4 2.6-2.6" stroke="${accent}" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
     case "code":
-      return `<path d="M7.5 5.5L1.5 11l6 5.5M15.5 5.5l6 5.5-6 5.5" ${stroke} /><line x1="12.8" y1="3" x2="10.2" y2="19" ${stroke} />`;
+      return `<path d="M7 5 1 10l6 5M13 5l6 5-6 5" ${stroke} /><line x1="12.8" y1="3" x2="10.2" y2="19" ${stroke} />`;
     default:
-      return `<circle cx="11" cy="11" r="8" fill="${accent}" />`;
+      return `<circle cx="10" cy="10" r="8" fill="${accent}" />`;
   }
 }
 
