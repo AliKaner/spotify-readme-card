@@ -60,6 +60,15 @@ const SHOWCASE = [
   { type: "now-playing", layout: "badge", theme: "ocean", label: "Now Playing · Badge" },
 ];
 
+const FUN_SHOWCASE = [
+  { type: "github-stats", layout: "trading-card", theme: "dracula", label: "GitHub Stats · Trading Card" },
+  { type: "github-stats", layout: "rpg-sheet", theme: "default", label: "GitHub Stats · RPG Sheet" },
+  { type: "github-stats", layout: "report-card", theme: "ocean", label: "GitHub Stats · Report Card" },
+  { type: "repo-contributions", layout: "wanted-poster", theme: "default", label: "Repo Contributions · Wanted Poster" },
+  { type: "repo-contributions", layout: "passport", theme: "midnight", label: "Repo Contributions · Passport" },
+  { type: "top-genres", layout: "boarding-pass", theme: "default", label: "Top Genres · Boarding Pass" },
+];
+
 export default function Home({ providers }: Props) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const showDashboardLink = !isLoading && isAuthenticated;
@@ -166,6 +175,32 @@ export default function Home({ providers }: Props) {
 
           <div className="mt-6 grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {SHOWCASE.map((item) => (
+              <Card
+                key={`${item.type}-${item.layout}`}
+                className="shadow-elevated flex flex-col items-center justify-center gap-3 bg-bg p-4"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/demo-card?type=${item.type}&layout=${item.layout}&theme=${item.theme}`}
+                  alt={item.label}
+                  className="max-w-full"
+                />
+                <span className="text-xs font-medium text-text-muted">{item.label}</span>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Fun showcase */}
+        <section className="mt-20">
+          <h2 className="text-lg font-semibold">Some of these get a little extra</h2>
+          <p className="mt-1 text-sm text-text-muted">
+            Trading cards, RPG sheets, wanted posters — the same GitHub and Spotify data, rendered as something more
+            fun to show off.
+          </p>
+
+          <div className="mt-6 grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FUN_SHOWCASE.map((item) => (
               <Card
                 key={`${item.type}-${item.layout}`}
                 className="shadow-elevated flex flex-col items-center justify-center gap-3 bg-bg p-4"

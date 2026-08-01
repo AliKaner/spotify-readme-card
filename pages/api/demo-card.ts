@@ -13,6 +13,15 @@ import { renderSingleItemLayout, type SingleItemGenericLayout } from "../../lib/
 import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../lib/cards/layouts/rankedList";
 import { renderAggregateStatLayout, type AggregateStatGenericLayout } from "../../lib/cards/layouts/aggregateStat";
 import { computeTopGenres } from "../../lib/spotify";
+import type { GithubProfile, GithubRepo } from "../../lib/github";
+import { buildGithubStatsCard } from "../../lib/cards/githubStatsCard";
+import { buildGithubTradingCard } from "../../lib/cards/githubTradingCard";
+import { buildGithubRpgSheetCard } from "../../lib/cards/githubRpgSheetCard";
+import { buildGithubReportCard } from "../../lib/cards/githubReportCard";
+import { buildRepoContributionsCard, type RepoContributionsData } from "../../lib/cards/repoContributionsCard";
+import { buildRepoPassportCard } from "../../lib/cards/repoPassportCard";
+import { buildRepoWantedPosterCard } from "../../lib/cards/repoWantedPosterCard";
+import { buildGenresBoardingPassCard } from "../../lib/cards/genresBoardingPassCard";
 
 // Self-contained gradient "album art" — no external image dependency, so the landing
 // page's demo never breaks on a dead hotlink. Rendered through the exact same card
@@ -40,6 +49,33 @@ const DEMO_ARTISTS = [
 
 const DEMO_PLAYLIST = { name: "Late Night Drive", trackCount: 42, owner: "you", hue: 210 };
 const DEMO_SONIC = { energy: 0.74, danceability: 0.68, valence: 0.52, tempo: 118 };
+
+const DEMO_GITHUB_PROFILE: GithubProfile = {
+  login: "octocat",
+  name: "The Octocat",
+  avatarUrl: "",
+  publicRepos: 87,
+  followers: 412,
+  following: 35,
+  publicGists: 9,
+  createdAt: "2015-06-01T00:00:00Z",
+  htmlUrl: "",
+};
+
+const DEMO_GITHUB_REPOS: GithubRepo[] = [
+  { name: "flagship-app", description: null, stars: 320, forks: 48, language: "TypeScript", htmlUrl: "", isFork: false, updatedAt: new Date().toISOString() },
+  { name: "cli-tool", description: null, stars: 60, forks: 12, language: "Go", htmlUrl: "", isFork: false, updatedAt: new Date().toISOString() },
+  { name: "data-lib", description: null, stars: 40, forks: 6, language: "Python", htmlUrl: "", isFork: false, updatedAt: new Date().toISOString() },
+  { name: "old-experiment", description: null, stars: 8, forks: 1, language: "Rust", htmlUrl: "", isFork: false, updatedAt: new Date().toISOString() },
+];
+
+const DEMO_REPO_CONTRIBUTIONS: RepoContributionsData = {
+  fullName: "vercel/next.js",
+  contributions: 58,
+  rank: 34,
+  totalContributors: 3400,
+  description: "The React Framework for the Web",
+};
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader("Content-Type", "image/svg+xml");
@@ -166,6 +202,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       res.status(200).send(buildTopGenresCard(genres, theme));
       return;
     }
+    if (layout === "boarding-pass") {
+      res.status(200).send(buildGenresBoardingPassCard(genres, theme));
+      return;
+    }
     const maxCount = Math.max(1, ...genres.map((g) => g.count));
     const metrics = genres.map((g) => ({ label: g.genre, value: g.count / maxCount }));
     res.status(200).send(renderAggregateStatLayout(layout as AggregateStatGenericLayout, { metrics }, theme, "Top Genres"));
@@ -188,6 +228,71 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         { metrics, statNumber: { value: DEMO_SONIC.tempo, label: "BPM AVG TEMPO" } },
         theme,
         "Sonic Profile"
+      )
+    );
+    return;
+  }
+
+  if (type === "github-stats") {
+    const avatar = gradientArt(210);
+    if (!layout || layout === "full") {
+      res.status(200).send(buildGithubStatsCard(DEMO_GITHUB_PROFILE, theme));
+      return;
+    }
+    if (layout === "trading-card") {
+      res.status(200).send(buildGithubTradingCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS, avatar, theme));
+      return;
+    }
+    if (layout === "rpg-sheet") {
+      res.status(200).send(buildGithubRpgSheetCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS, avatar, theme));
+      return;
+    }
+    if (layout === "report-card") {
+      res.status(200).send(buildGithubReportCard(DEMO_GITHUB_PROFILE, DEMO_GITHUB_REPOS, avatar, theme));
+      return;
+    }
+    const years = Math.max(0, (Date.now() - new Date(DEMO_GITHUB_PROFILE.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000));
+    const metrics = [
+      { label: "repos", value: Math.min(DEMO_GITHUB_PROFILE.publicRepos / 100, 1) },
+      { label: "followers", value: Math.min(DEMO_GITHUB_PROFILE.followers / 500, 1) },
+      { label: "gists", value: Math.min(DEMO_GITHUB_PROFILE.publicGists / 20, 1) },
+    ];
+    res.status(200).send(
+      renderAggregateStatLayout(
+        layout as AggregateStatGenericLayout,
+        { metrics, statNumber: { value: years, label: "YEARS ON GITHUB" } },
+        theme,
+        "GitHub Stats"
+      )
+    );
+    return;
+  }
+
+  if (type === "repo-contributions") {
+    const avatar = gradientArt(150);
+    if (!layout || layout === "full") {
+      res.status(200).send(buildRepoContributionsCard(DEMO_REPO_CONTRIBUTIONS, avatar, theme));
+      return;
+    }
+    if (layout === "passport") {
+      res.status(200).send(buildRepoPassportCard(DEMO_REPO_CONTRIBUTIONS, avatar, DEMO_GITHUB_PROFILE.login, theme));
+      return;
+    }
+    if (layout === "wanted-poster") {
+      res.status(200).send(buildRepoWantedPosterCard(DEMO_REPO_CONTRIBUTIONS, avatar, DEMO_GITHUB_PROFILE.login));
+      return;
+    }
+    res.status(200).send(
+      renderSingleItemLayout(
+        layout as SingleItemGenericLayout,
+        {
+          title: `${DEMO_REPO_CONTRIBUTIONS.contributions} commits`,
+          subtitle: `${DEMO_REPO_CONTRIBUTIONS.fullName} · #${DEMO_REPO_CONTRIBUTIONS.rank}`,
+          art: avatar,
+          statusLabel: "Contributor",
+          brand: "app",
+        },
+        theme
       )
     );
     return;
