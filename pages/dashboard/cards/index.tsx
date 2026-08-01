@@ -52,6 +52,11 @@ export default function CardsList() {
             <Plus className="h-4 w-4" /> New card
           </LinkButton>
         </div>
+        <p className="mt-2 max-w-xl text-sm text-text-muted">
+          Copy the snippet under a card and paste it into <code className="text-text">README.md</code> in the repo
+          named exactly like your GitHub username (create that repo if you don&apos;t have one — GitHub turns it into
+          your profile page). The image updates on its own; you never need to touch the snippet again.
+        </p>
 
         {cards.length === 0 && <p className="mt-8 text-text-muted">No cards yet.</p>}
 

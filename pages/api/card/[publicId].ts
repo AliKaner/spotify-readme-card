@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createConvexClient } from "../../../lib/convexClient";
 import { resolveTheme } from "../../../lib/themes";
 import { getProvider } from "../../../lib/providers/registry";
+import { buildErrorCard } from "../../../lib/cards/errorCard";
 import { api } from "../../../convex/_generated/api";
 
 const CACHE_BY_TYPE: Record<string, string> = {
@@ -14,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { publicId } = req.query;
   if (typeof publicId !== "string") {
-    res.status(400).send(errorCard("Invalid card id"));
+    res.status(400).send(buildErrorCard("Invalid card id"));
     return;
   }
 
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const card = await client.query(api.cards.getByPublicId, { publicId });
     if (!card) {
       res.setHeader("Cache-Control", "no-store");
-      res.status(404).send(errorCard("Card not found"));
+      res.status(404).send(buildErrorCard("Card not found"));
       return;
     }
 
@@ -31,32 +32,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const provider = getProvider(card.provider);
     if (!provider) {
-      res.status(200).send(errorCard("Unknown provider"));
-      return;
-    }
-
-    const connection = await client.query(api.connections.getByUserAndProvider, {
-      userId: card.userId,
-      provider: card.provider,
-    });
-    if (!connection) {
-      res.status(200).send(errorCard(`${provider.displayName} not connected`));
+      res.status(200).send(buildErrorCard("Unknown provider"));
       return;
     }
 
     const theme = resolveTheme(card.theme);
-    const svg = await provider.renderCard({ connection, type: card.type, theme, config: card.config });
+    const svg = await provider.renderCard({ userId: card.userId, type: card.type, theme, config: card.config });
 
     res.status(200).send(svg);
   } catch (error) {
     console.error(`GET /api/card/${publicId} failed:`, error);
-    res.status(200).send(errorCard("Unable to load card data"));
+    res.status(200).send(buildErrorCard("Unable to load card data"));
   }
-}
-
-function errorCard(message: string): string {
-  return `<svg width="480" height="140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${message}">
-  <rect width="480" height="140" rx="12" fill="#191414" />
-  <text x="240" y="74" text-anchor="middle" fill="#b3b3b3" font-family="Segoe UI, sans-serif" font-size="13">${message}</text>
-</svg>`;
 }

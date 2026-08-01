@@ -21,31 +21,59 @@ type CardType =
   | "sonic-profile"
   | "featured-track"
   | "featured-artist"
-  | "featured-playlist";
+  | "featured-playlist"
+  | "gallery"
+  | "product"
+  | "social"
+  | "hobby-stat"
+  | "github-stats"
+  | "top-languages"
+  | "top-repos"
+  | "recent-activity"
+  | "badges";
+
+type ProviderId = "spotify" | "custom" | "github" | "achievements";
+type TimeRangeId = "short_term" | "medium_term" | "long_term";
 
 const FEATURED_PICKER_TYPE: Partial<Record<CardType, PickerType>> = {
   "featured-track": "track",
   "featured-artist": "artist",
   "featured-playlist": "playlist",
 };
-type TimeRangeId = "short_term" | "medium_term" | "long_term";
 
 const THEME_OPTIONS = Object.keys(themes);
 
-const TYPE_OPTIONS: { id: CardType; label: string }[] = [
-  { id: "now-playing", label: "Now Playing" },
-  { id: "top-tracks", label: "Top Tracks" },
-  { id: "top-artists", label: "Top Artists" },
-  { id: "recently-played", label: "Recently Played" },
-  { id: "top-genres", label: "Top Genres" },
-  { id: "sonic-profile", label: "Sonic Profile" },
-  { id: "featured-track", label: "Featured Track" },
-  { id: "featured-artist", label: "Featured Artist" },
-  { id: "featured-playlist", label: "Featured Playlist" },
+const TYPE_OPTIONS: { id: CardType; label: string; provider: ProviderId }[] = [
+  { id: "now-playing", label: "Now Playing", provider: "spotify" },
+  { id: "top-tracks", label: "Top Tracks", provider: "spotify" },
+  { id: "top-artists", label: "Top Artists", provider: "spotify" },
+  { id: "recently-played", label: "Recently Played", provider: "spotify" },
+  { id: "top-genres", label: "Top Genres", provider: "spotify" },
+  { id: "sonic-profile", label: "Sonic Profile", provider: "spotify" },
+  { id: "featured-track", label: "Featured Track", provider: "spotify" },
+  { id: "featured-artist", label: "Featured Artist", provider: "spotify" },
+  { id: "featured-playlist", label: "Featured Playlist", provider: "spotify" },
+  { id: "gallery", label: "Gallery", provider: "custom" },
+  { id: "product", label: "Product", provider: "custom" },
+  { id: "social", label: "Social", provider: "custom" },
+  { id: "hobby-stat", label: "Hobby Stat", provider: "custom" },
+  { id: "github-stats", label: "GitHub Stats", provider: "github" },
+  { id: "top-languages", label: "Top Languages", provider: "github" },
+  { id: "top-repos", label: "Top Repositories", provider: "github" },
+  { id: "recent-activity", label: "Recent Activity", provider: "github" },
+  { id: "badges", label: "Badges", provider: "achievements" },
 ];
 
-const SINGLE_ITEM_TYPES: CardType[] = ["now-playing", "featured-track", "featured-artist", "featured-playlist"];
-const RANKED_LIST_TYPES: CardType[] = ["top-tracks", "top-artists", "recently-played"];
+const SINGLE_ITEM_TYPES: CardType[] = [
+  "now-playing",
+  "featured-track",
+  "featured-artist",
+  "featured-playlist",
+  "product",
+  "social",
+  "hobby-stat",
+];
+const RANKED_LIST_TYPES: CardType[] = ["top-tracks", "top-artists", "recently-played", "top-repos", "recent-activity"];
 
 const SINGLE_ITEM_LAYOUT_OPTIONS = [
   { id: "full", label: "Full" },
@@ -74,7 +102,27 @@ const AGGREGATE_STAT_LAYOUT_OPTIONS = [
   { id: "portrait", label: "Portrait" },
 ];
 
+const GALLERY_LAYOUT_OPTIONS = [
+  { id: "stack", label: "Stack" },
+  { id: "grid", label: "Grid" },
+  { id: "avatars", label: "Avatars" },
+  { id: "terminal", label: "Terminal" },
+  { id: "bars", label: "Bars" },
+  { id: "compact", label: "Compact" },
+];
+
+const GITHUB_STATS_LAYOUT_OPTIONS = [
+  { id: "full", label: "Full" },
+  { id: "terminal", label: "Terminal" },
+  { id: "radial", label: "Radial" },
+  { id: "badge", label: "Badge" },
+  { id: "tiles", label: "Tiles" },
+  { id: "portrait", label: "Portrait" },
+];
+
 function layoutOptionsFor(t: CardType): { id: string; label: string }[] {
+  if (t === "gallery") return GALLERY_LAYOUT_OPTIONS;
+  if (t === "github-stats") return GITHUB_STATS_LAYOUT_OPTIONS;
   if (SINGLE_ITEM_TYPES.includes(t)) return SINGLE_ITEM_LAYOUT_OPTIONS;
   if (RANKED_LIST_TYPES.includes(t)) return RANKED_LIST_LAYOUT_OPTIONS;
   return AGGREGATE_STAT_LAYOUT_OPTIONS;
@@ -96,6 +144,10 @@ function cycleValue<T>(values: readonly T[], current: T, dir: 1 | -1): T {
   const idx = values.indexOf(current);
   return values[(idx + dir + values.length) % values.length];
 }
+
+const inputClass =
+  "mt-1.5 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:border-accent focus:outline-none";
+const fieldLabelClass = "block text-sm font-medium text-text-muted";
 
 function AttributeRow({
   label,
@@ -156,19 +208,52 @@ export default function NewCard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Custom (no-OAuth) card fields
+  const [galleryTitle, setGalleryTitle] = useState("Gallery");
+  const [galleryImages, setGalleryImages] = useState([
+    { url: "", caption: "" },
+    { url: "", caption: "" },
+    { url: "", caption: "" },
+    { url: "", caption: "" },
+  ]);
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productImageUrl, setProductImageUrl] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [socialPlatform, setSocialPlatform] = useState("");
+  const [socialHandle, setSocialHandle] = useState("");
+  const [socialFollowers, setSocialFollowers] = useState("");
+  const [hobbyLabel, setHobbyLabel] = useState("");
+  const [hobbyValue, setHobbyValue] = useState("");
+  const [hobbyDescription, setHobbyDescription] = useState("");
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
+  const currentOption = TYPE_OPTIONS.find((t) => t.id === type)!;
   const featuredPickerType = FEATURED_PICKER_TYPE[type] ?? null;
-  const showTimeRange = !featuredPickerType && type !== "now-playing" && type !== "recently-played";
+  const showTimeRange = !featuredPickerType && (type === "top-tracks" || type === "top-artists" || type === "top-genres" || type === "sonic-profile");
   const showCount = type === "top-tracks" || type === "top-artists" || type === "recently-played";
+  const spotifyNotConnected = currentOption.provider === "spotify" && !connection;
+
+  function updateGalleryImage(index: number, field: "url" | "caption", value: string) {
+    setGalleryImages((prev) => prev.map((img, i) => (i === index ? { ...img, [field]: value } : img)));
+  }
 
   function selectType(next: CardType) {
     setType(next);
     setFeaturedSelection(null);
     setLayout(layoutOptionsFor(next)[0].id);
+  }
+
+  function isCustomFormReady(): boolean {
+    if (type === "product") return productName.trim().length > 0;
+    if (type === "social") return socialPlatform.trim().length > 0 && socialHandle.trim().length > 0;
+    if (type === "hobby-stat") return hobbyLabel.trim().length > 0 && hobbyValue.trim().length > 0;
+    if (type === "gallery") return galleryImages.some((img) => img.url.trim().length > 0);
+    return true;
   }
 
   function buildConfig(): Record<string, unknown> {
@@ -177,15 +262,52 @@ export default function NewCard() {
     if (type === "top-tracks") return { time_range: timeRange, limit, layout };
     if (type === "top-artists") return { time_range: timeRange, limit, layout };
     if (type === "recently-played") return { limit, layout };
-    return { time_range: timeRange, layout };
+    if (type === "top-genres" || type === "sonic-profile") return { time_range: timeRange, layout };
+    if (type === "gallery") {
+      const images = galleryImages
+        .filter((img) => img.url.trim())
+        .map((img) => ({ url: img.url.trim(), caption: img.caption.trim() || undefined }));
+      return { title: galleryTitle.trim() || "Gallery", images, layout };
+    }
+    if (type === "product") {
+      return {
+        name: productName.trim(),
+        price: productPrice.trim() || undefined,
+        imageUrl: productImageUrl.trim() || undefined,
+        description: productDescription.trim() || undefined,
+        layout,
+      };
+    }
+    if (type === "social") {
+      return {
+        platform: socialPlatform.trim(),
+        handle: socialHandle.trim(),
+        followers: socialFollowers.trim() ? Number(socialFollowers) : undefined,
+        layout,
+      };
+    }
+    if (type === "hobby-stat") {
+      return { label: hobbyLabel.trim(), value: hobbyValue.trim(), description: hobbyDescription.trim() || undefined, layout };
+    }
+    return { layout };
   }
 
   // Live preview: debounced fetch of the SVG for the current (unsaved) form state,
   // rendered via a blob URL so we can attach the auth token without exposing it in an
   // <img src> URL.
   useEffect(() => {
-    if (!connection || !token) return;
+    if (!token) return;
+    if (spotifyNotConnected) {
+      setPreviewUrl(null);
+      setPreviewError(null);
+      return;
+    }
     if (featuredPickerType && !featuredSelection) {
+      setPreviewUrl(null);
+      setPreviewError(null);
+      return;
+    }
+    if (currentOption.provider === "custom" && !isCustomFormReady()) {
       setPreviewUrl(null);
       setPreviewError(null);
       return;
@@ -199,7 +321,7 @@ export default function NewCard() {
         const response = await authFetch(token, "/api/cards/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: "spotify", type, theme, config }),
+          body: JSON.stringify({ provider: currentOption.provider, type, theme, config }),
         });
 
         if (!response.ok) {
@@ -222,7 +344,28 @@ export default function NewCard() {
 
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connection, token, type, theme, layout, timeRange, limit, featuredSelection]);
+  }, [
+    token,
+    type,
+    theme,
+    layout,
+    timeRange,
+    limit,
+    featuredSelection,
+    spotifyNotConnected,
+    galleryTitle,
+    galleryImages,
+    productName,
+    productPrice,
+    productImageUrl,
+    productDescription,
+    socialPlatform,
+    socialHandle,
+    socialFollowers,
+    hobbyLabel,
+    hobbyValue,
+    hobbyDescription,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -238,20 +381,6 @@ export default function NewCard() {
     );
   }
 
-  if (!connection) {
-    return (
-      <Layout>
-        <p className="text-text-muted">
-          Connect Spotify from the{" "}
-          <a href="/dashboard" className="text-accent underline underline-offset-4">
-            dashboard
-          </a>{" "}
-          before creating a card.
-        </p>
-      </Layout>
-    );
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -260,7 +389,7 @@ export default function NewCard() {
     const response = await authFetch(token, "/api/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: "spotify", type, theme, config: buildConfig() }),
+      body: JSON.stringify({ provider: currentOption.provider, type, theme, config: buildConfig() }),
     });
 
     if (!response.ok) {
@@ -273,6 +402,12 @@ export default function NewCard() {
     router.push("/dashboard/cards");
   }
 
+  const submitDisabled =
+    submitting ||
+    Boolean(featuredPickerType && !featuredSelection) ||
+    spotifyNotConnected ||
+    (currentOption.provider === "custom" && !isCustomFormReady());
+
   return (
     <>
       <Head>
@@ -284,8 +419,18 @@ export default function NewCard() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <Card className="flex min-h-[220px] items-center justify-center bg-bg">
-            {featuredPickerType && !featuredSelection ? (
+            {spotifyNotConnected ? (
+              <p className="px-4 text-center text-sm text-text-muted">
+                Connect Spotify from the{" "}
+                <a href="/dashboard" className="text-accent underline underline-offset-4">
+                  dashboard
+                </a>{" "}
+                to preview this card type.
+              </p>
+            ) : featuredPickerType && !featuredSelection ? (
               <p className="px-4 text-center text-sm text-text-muted">Search and pick one to preview it here.</p>
+            ) : currentOption.provider === "custom" && !isCustomFormReady() ? (
+              <p className="px-4 text-center text-sm text-text-muted">Fill in the details to preview your card here.</p>
             ) : previewError ? (
               <p className="px-4 text-center text-sm text-red-400">{previewError}</p>
             ) : previewUrl ? (
@@ -316,12 +461,14 @@ export default function NewCard() {
                   onNext={() => setTheme(cycleValue(THEME_OPTIONS, theme, 1))}
                 />
 
-                <AttributeRow
-                  label="Layout"
-                  value={layoutOptionsFor(type).find((l) => l.id === layout)?.label ?? layout}
-                  onPrev={() => setLayout(cycleId(layoutOptionsFor(type), layout, -1))}
-                  onNext={() => setLayout(cycleId(layoutOptionsFor(type), layout, 1))}
-                />
+                {type !== "badges" && (
+                  <AttributeRow
+                    label="Layout"
+                    value={layoutOptionsFor(type).find((l) => l.id === layout)?.label ?? layout}
+                    onPrev={() => setLayout(cycleId(layoutOptionsFor(type), layout, -1))}
+                    onNext={() => setLayout(cycleId(layoutOptionsFor(type), layout, 1))}
+                  />
+                )}
 
                 {featuredPickerType && (
                   <div className="py-3">
@@ -374,15 +521,166 @@ export default function NewCard() {
                     </div>
                   </div>
                 )}
+
+                {spotifyNotConnected && (
+                  <p className="py-3 text-sm text-text-muted">
+                    Connect Spotify from the{" "}
+                    <a href="/dashboard" className="text-accent underline underline-offset-4">
+                      dashboard
+                    </a>{" "}
+                    to use this card type.
+                  </p>
+                )}
+
+                {type === "gallery" && (
+                  <div className="space-y-4 py-3">
+                    <label className={fieldLabelClass}>
+                      Title
+                      <input
+                        type="text"
+                        value={galleryTitle}
+                        onChange={(e) => setGalleryTitle(e.target.value)}
+                        placeholder="Gallery"
+                        className={inputClass}
+                      />
+                    </label>
+                    {galleryImages.map((img, i) => (
+                      <div key={i} className="grid grid-cols-2 gap-3">
+                        <label className={fieldLabelClass}>
+                          Image {i + 1} URL
+                          <input
+                            type="url"
+                            value={img.url}
+                            onChange={(e) => updateGalleryImage(i, "url", e.target.value)}
+                            placeholder="https://…"
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className={fieldLabelClass}>
+                          Caption
+                          <input
+                            type="text"
+                            value={img.caption}
+                            onChange={(e) => updateGalleryImage(i, "caption", e.target.value)}
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {type === "product" && (
+                  <div className="space-y-4 py-3">
+                    <label className={fieldLabelClass}>
+                      Name
+                      <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} className={inputClass} />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Price
+                      <input
+                        type="text"
+                        value={productPrice}
+                        onChange={(e) => setProductPrice(e.target.value)}
+                        placeholder="$29"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Image URL
+                      <input
+                        type="url"
+                        value={productImageUrl}
+                        onChange={(e) => setProductImageUrl(e.target.value)}
+                        placeholder="https://…"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Description
+                      <input
+                        type="text"
+                        value={productDescription}
+                        onChange={(e) => setProductDescription(e.target.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {type === "social" && (
+                  <div className="space-y-4 py-3">
+                    <label className={fieldLabelClass}>
+                      Platform
+                      <input
+                        type="text"
+                        value={socialPlatform}
+                        onChange={(e) => setSocialPlatform(e.target.value)}
+                        placeholder="Twitter, Instagram, …"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Handle
+                      <input
+                        type="text"
+                        value={socialHandle}
+                        onChange={(e) => setSocialHandle(e.target.value)}
+                        placeholder="yourname"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Followers
+                      <input
+                        type="number"
+                        min={0}
+                        value={socialFollowers}
+                        onChange={(e) => setSocialFollowers(e.target.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {type === "hobby-stat" && (
+                  <div className="space-y-4 py-3">
+                    <label className={fieldLabelClass}>
+                      Label
+                      <input
+                        type="text"
+                        value={hobbyLabel}
+                        onChange={(e) => setHobbyLabel(e.target.value)}
+                        placeholder="Books read in 2026"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Value
+                      <input
+                        type="text"
+                        value={hobbyValue}
+                        onChange={(e) => setHobbyValue(e.target.value)}
+                        placeholder="24"
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Description
+                      <input
+                        type="text"
+                        value={hobbyDescription}
+                        onChange={(e) => setHobbyDescription(e.target.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
-              <Button
-                type="submit"
-                disabled={submitting || Boolean(featuredPickerType && !featuredSelection)}
-                className="mt-6 w-full"
-              >
+              <Button type="submit" disabled={submitDisabled} className="mt-6 w-full">
                 {submitting ? "Creating…" : "Create card"}
               </Button>
             </form>

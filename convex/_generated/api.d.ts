@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as cards from "../cards.js";
 import type * as connections from "../connections.js";
+import type * as githubAccounts from "../githubAccounts.js";
 import type * as http from "../http.js";
 import type * as users from "../users.js";
 
@@ -24,6 +25,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   cards: typeof cards;
   connections: typeof connections;
+  githubAccounts: typeof githubAccounts;
   http: typeof http;
   users: typeof users;
 }>;

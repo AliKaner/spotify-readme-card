@@ -1,0 +1,110 @@
+import { z } from "zod";
+import type { Id } from "../../../convex/_generated/dataModel";
+import type { Theme } from "../../themes";
+import { createConvexClient } from "../../convexClient";
+import { api } from "../../../convex/_generated/api";
+import { getGithubProfileById, getGithubRepos, getGithubRecentActivity, computeTopRepos, computeTopLanguages } from "../../github";
+import { buildGithubStatsCard } from "../../cards/githubStatsCard";
+import { buildTopLanguagesCard } from "../../cards/topLanguagesCard";
+import { buildGithubReposCard } from "../../cards/githubReposCard";
+import { buildGithubActivityCard } from "../../cards/githubActivityCard";
+import { buildErrorCard } from "../../cards/errorCard";
+import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../cards/layouts/rankedList";
+import { renderAggregateStatLayout, type AggregateStatGenericLayout } from "../../cards/layouts/aggregateStat";
+import type { CardTypeDef, Provider } from "../types";
+
+const statsConfigSchema = z.object({
+  layout: z.enum(["full", "terminal", "radial", "badge", "tiles", "portrait"]).default("full"),
+});
+
+const languagesConfigSchema = z.object({
+  layout: z.enum(["bars", "terminal", "radial", "badge", "tiles", "portrait"]).default("bars"),
+});
+
+const reposConfigSchema = z.object({
+  layout: z.enum(["list", "grid", "avatars", "terminal", "bars", "compact"]).default("list"),
+});
+
+const activityConfigSchema = z.object({
+  layout: z.enum(["list", "grid", "avatars", "terminal", "bars", "compact"]).default("list"),
+});
+
+export const githubCardTypes: CardTypeDef[] = [
+  { id: "github-stats", label: "GitHub Stats", configSchema: statsConfigSchema, defaultConfig: { layout: "full" } },
+  { id: "top-languages", label: "Top Languages", configSchema: languagesConfigSchema, defaultConfig: { layout: "bars" } },
+  { id: "top-repos", label: "Top Repositories", configSchema: reposConfigSchema, defaultConfig: { layout: "list" } },
+  { id: "recent-activity", label: "Recent Activity", configSchema: activityConfigSchema, defaultConfig: { layout: "list" } },
+];
+
+async function renderCard(args: {
+  userId: Id<"users">;
+  type: string;
+  theme: Theme;
+  config: unknown;
+}): Promise<string> {
+  const client = createConvexClient();
+  const accountId = await client.query(api.githubAccounts.getForUser, { userId: args.userId });
+  if (!accountId) return buildErrorCard("GitHub not available");
+
+  const profile = await getGithubProfileById(accountId);
+  if (!profile) return buildErrorCard("GitHub profile not found");
+
+  if (args.type === "github-stats") {
+    const parsed = statsConfigSchema.parse(args.config ?? {});
+    if (parsed.layout === "full") return buildGithubStatsCard(profile, args.theme);
+
+    const years = Math.max(0, (Date.now() - new Date(profile.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000));
+    const metrics = [
+      { label: "repos", value: Math.min(profile.publicRepos / 100, 1) },
+      { label: "followers", value: Math.min(profile.followers / 500, 1) },
+      { label: "gists", value: Math.min(profile.publicGists / 20, 1) },
+    ];
+    return renderAggregateStatLayout(
+      parsed.layout as AggregateStatGenericLayout,
+      { metrics, statNumber: { value: years, label: "YEARS ON GITHUB" } },
+      args.theme,
+      "GitHub Stats"
+    );
+  }
+
+  if (args.type === "top-languages") {
+    const parsed = languagesConfigSchema.parse(args.config ?? {});
+    const repos = await getGithubRepos(profile.login, 100);
+    const languages = computeTopLanguages(repos, 5);
+    if (parsed.layout === "bars") return buildTopLanguagesCard(languages, args.theme);
+
+    const maxCount = Math.max(1, ...languages.map((l) => l.count));
+    const metrics = languages.map((l) => ({ label: l.language, value: l.count / maxCount }));
+    return renderAggregateStatLayout(parsed.layout as AggregateStatGenericLayout, { metrics }, args.theme, "Top Languages");
+  }
+
+  if (args.type === "top-repos") {
+    const parsed = reposConfigSchema.parse(args.config ?? {});
+    const repos = await getGithubRepos(profile.login, 100);
+    const top = computeTopRepos(repos, 5);
+    if (parsed.layout === "list") return buildGithubReposCard(top, args.theme);
+
+    const items: RankedItem[] = top.map((r) => ({ title: r.name, subtitle: `${r.stars} stars`, art: null }));
+    return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, args.theme, "Top Repositories");
+  }
+
+  if (args.type === "recent-activity") {
+    const parsed = activityConfigSchema.parse(args.config ?? {});
+    const activity = await getGithubRecentActivity(profile.login, 5);
+    if (parsed.layout === "list") return buildGithubActivityCard(activity, args.theme);
+
+    const items: RankedItem[] = activity.map((a) => ({ title: a.message, subtitle: a.repo, art: null }));
+    return renderRankedListLayout(parsed.layout as RankedListGenericLayout, items, args.theme, "Recent Activity");
+  }
+
+  throw new Error(`Unknown GitHub card type: ${args.type}`);
+}
+
+export const githubProvider: Provider = {
+  id: "github",
+  displayName: "GitHub",
+  status: "live",
+  requiresConnection: false,
+  cardTypes: githubCardTypes,
+  renderCard,
+};

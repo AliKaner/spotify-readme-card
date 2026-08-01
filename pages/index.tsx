@@ -1,7 +1,7 @@
 import Head from "next/head";
 import type { GetServerSideProps } from "next";
 import { useConvexAuth } from "@convex-dev/auth/react";
-import { LogIn, ArrowRight, Music2, Clock3, Radio, BarChart3 } from "lucide-react";
+import { LogIn, ArrowRight, Music2, Clock3, Radio, BarChart3, Palette, ClipboardCopy, Trophy, Layers } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -11,7 +11,7 @@ import { listProviders, type MarketplaceEntry } from "../lib/providers/registry"
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://your-deployment.vercel.app";
 const TITLE = "README Card Marketplace — Live Widgets for Your GitHub Profile";
 const DESCRIPTION =
-  "Connect Spotify (and more services soon), build a live SVG card from ready-made themes, and drop it straight into your GitHub profile README. Self-hosted, no third party in the middle of your data.";
+  "Spotify listening, GitHub stats, earned achievements, or your own custom cards — build a live SVG card from ready-made themes and layouts, and drop it straight into your GitHub profile README. Self-hosted, no third party in the middle of your data.";
 
 interface Props {
   providers: MarketplaceEntry[];
@@ -23,10 +23,30 @@ export const getServerSideProps: GetServerSideProps<Props> = async () => {
 
 const PROVIDER_ICONS: Record<string, typeof Music2> = {
   spotify: Music2,
+  github: BarChart3,
+  achievements: Trophy,
+  custom: Layers,
   wakatime: Clock3,
   lastfm: Radio,
-  "github-stats": BarChart3,
 };
+
+const HOW_IT_WORKS = [
+  {
+    icon: LogIn,
+    title: "Sign in with GitHub",
+    body: "Then connect Spotify (or add data manually) — no data is shared with anyone else.",
+  },
+  {
+    icon: Palette,
+    title: "Build a card",
+    body: "Pick a card type, a layout, and a theme. A live preview updates as you go.",
+  },
+  {
+    icon: ClipboardCopy,
+    title: "Paste it into your profile README",
+    body: "Copy the one-line snippet into the special repo named exactly like your username (create it if you don't have one yet — GitHub turns it into your profile page).",
+  },
+];
 
 const SHOWCASE = [
   { type: "now-playing", layout: "full", theme: "default", label: "Now Playing · Full" },
@@ -74,15 +94,15 @@ export default function Home({ providers }: Props) {
           <div className="relative grid items-center gap-12 lg:grid-cols-2">
             <div>
               <span className="font-mono text-xs font-medium tracking-wider text-accent">
-                MARKETPLACE · 9 CARD TYPES
+                MARKETPLACE · 18 CARD TYPES
               </span>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-                Your Spotify activity, live on your GitHub profile
+                Live cards for your GitHub profile, from what you actually do
               </h1>
               <p className="mt-5 max-w-md text-balance text-text-muted">
-                Connect your account, pick a card and a theme, and paste one line into your
-                README. The image is generated fresh on every view — no screenshots, no stale
-                data, no third party sitting on top of your account.
+                Spotify listening, GitHub stats, earned achievements, or your own gallery and
+                social links — pick a card, a layout, and a theme, then paste one line into your
+                README. Every image is generated fresh on every view.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <LinkButton
@@ -117,6 +137,23 @@ export default function Home({ providers }: Props) {
                 className="shadow-elevated absolute right-0 top-24 w-[380px] rotate-2 rounded-2xl"
               />
             </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="mt-20">
+          <h2 className="text-lg font-semibold">How it works</h2>
+          <div className="mt-6 grid gap-5 sm:grid-cols-3">
+            {HOW_IT_WORKS.map((step, i) => (
+              <Card key={step.title} className="relative">
+                <span className="font-mono text-xs text-text-muted">0{i + 1}</span>
+                <div className="mt-3 flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft">
+                  <step.icon className="h-4.5 w-4.5 text-accent" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold">{step.title}</h3>
+                <p className="mt-1.5 text-sm text-text-muted">{step.body}</p>
+              </Card>
+            ))}
           </div>
         </section>
 

@@ -70,3 +70,17 @@ export function brandFooter(theme: Theme, x: number, y: number): string {
     <text x="21" y="12" class="brand">SPOTIFY</text>
   </g>`;
 }
+
+/** Equalizer-bar mark (matches components/Logo.tsx) for cards with no third-party data source. */
+export function appGlyph(accent: string): string {
+  return `<rect x="0" y="9" width="3" height="5" rx="1" fill="${accent}" />
+  <rect x="4.5" y="5" width="3" height="9" rx="1" fill="${accent}" />
+  <rect x="9" y="7" width="3" height="7" rx="1" fill="${accent}" />`;
+}
+
+export function appBrandFooter(theme: Theme, x: number, y: number): string {
+  return `<g transform="translate(${x}, ${y})" opacity="0.85">
+    ${appGlyph(theme.accent)}
+    <text x="18" y="12" class="brand">README CARDS</text>
+  </g>`;
+}

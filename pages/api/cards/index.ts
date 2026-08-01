@@ -53,10 +53,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    const connection = await client.query(api.connections.getForCurrentUser, { provider: providerId });
-    if (!connection) {
-      res.status(400).json({ error: `Connect ${provider.displayName} before creating a card.` });
-      return;
+    if (provider.requiresConnection) {
+      const connection = await client.query(api.connections.getForCurrentUser, { provider: providerId });
+      if (!connection) {
+        res.status(400).json({ error: `Connect ${provider.displayName} before creating a card.` });
+        return;
+      }
     }
 
     const configParse = cardType.configSchema.safeParse(config ?? {});

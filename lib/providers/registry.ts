@@ -1,8 +1,14 @@
 import { spotifyProvider } from "./spotify";
+import { customProvider } from "./custom";
+import { githubProvider } from "./github";
+import { achievementsProvider } from "./achievements";
 import type { Provider } from "./types";
 
 export const providers: Record<string, Provider> = {
   spotify: spotifyProvider,
+  custom: customProvider,
+  github: githubProvider,
+  achievements: achievementsProvider,
 };
 
 export interface MarketplaceEntry {
@@ -15,7 +21,6 @@ export interface MarketplaceEntry {
 const COMING_SOON: MarketplaceEntry[] = [
   { id: "wakatime", displayName: "WakaTime", status: "coming-soon" },
   { id: "lastfm", displayName: "Last.fm", status: "coming-soon" },
-  { id: "github-stats", displayName: "GitHub Stats", status: "coming-soon" },
 ];
 
 export function listProviders(): MarketplaceEntry[] {

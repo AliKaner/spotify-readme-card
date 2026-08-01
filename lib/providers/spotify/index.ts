@@ -1,7 +1,10 @@
 import { z } from "zod";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { Theme } from "../../themes";
 import { getValidSpotifyAccessToken } from "../../connections";
+import { createConvexClient } from "../../convexClient";
+import { buildErrorCard } from "../../cards/errorCard";
+import { api } from "../../../convex/_generated/api";
 import {
   getNowPlaying,
   getTopTracks,
@@ -136,12 +139,16 @@ export const spotifyCardTypes: CardTypeDef[] = [
 ];
 
 async function renderCard(args: {
-  connection: Doc<"connections">;
+  userId: Id<"users">;
   type: string;
   theme: Theme;
   config: unknown;
 }): Promise<string> {
-  const accessToken = await getValidSpotifyAccessToken(args.connection);
+  const client = createConvexClient();
+  const connection = await client.query(api.connections.getByUserAndProvider, { userId: args.userId, provider: "spotify" });
+  if (!connection) return buildErrorCard("Spotify not connected");
+
+  const accessToken = await getValidSpotifyAccessToken(connection);
   const theme = args.theme;
 
   if (args.type === "now-playing") {
@@ -268,6 +275,7 @@ export const spotifyProvider: Provider = {
   id: "spotify",
   displayName: "Spotify",
   status: "live",
+  requiresConnection: true,
   cardTypes: spotifyCardTypes,
   renderCard,
 };

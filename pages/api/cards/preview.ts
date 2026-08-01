@@ -14,8 +14,7 @@ const previewSchema = z.object({
 
 // Authenticated, no persistence — renders a card from in-progress form state (not yet
 // saved) so the dashboard's "new card" screen can show a live preview as the user tweaks
-// options. Uses the caller's own connection, resolved via the bearer token like the rest
-// of the authenticated API routes.
+// options.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -44,21 +43,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  if (provider.requiresConnection) {
+    const connection = await session.client.query(api.connections.getForCurrentUser, { provider: providerId });
+    if (!connection) {
+      res.status(400).json({ error: `Connect ${provider.displayName} first.` });
+      return;
+    }
+  }
+
   const configParse = cardType.configSchema.safeParse(config ?? {});
   if (!configParse.success) {
     res.status(400).json({ error: "Invalid card config" });
     return;
   }
 
-  const connection = await session.client.query(api.connections.getForCurrentUser, { provider: providerId });
-  if (!connection) {
-    res.status(400).json({ error: `Connect ${provider.displayName} first.` });
-    return;
-  }
-
   try {
     const svg = await provider.renderCard({
-      connection,
+      userId: session.user._id,
       type,
       theme: resolveTheme(theme),
       config: configParse.data,
