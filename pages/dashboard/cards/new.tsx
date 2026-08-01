@@ -130,11 +130,15 @@ const GITHUB_STATS_LAYOUT_OPTIONS = [
   { id: "badge", label: "Badge" },
   { id: "tiles", label: "Tiles" },
   { id: "portrait", label: "Portrait" },
+  { id: "trading-card", label: "Trading Card" },
 ];
+
+const REPO_CONTRIBUTIONS_LAYOUT_OPTIONS = [...SINGLE_ITEM_LAYOUT_OPTIONS, { id: "passport", label: "Passport" }];
 
 function layoutOptionsFor(t: CardType): { id: string; label: string }[] {
   if (t === "gallery") return GALLERY_LAYOUT_OPTIONS;
   if (t === "github-stats") return GITHUB_STATS_LAYOUT_OPTIONS;
+  if (t === "repo-contributions") return REPO_CONTRIBUTIONS_LAYOUT_OPTIONS;
   if (SINGLE_ITEM_TYPES.includes(t)) return SINGLE_ITEM_LAYOUT_OPTIONS;
   if (RANKED_LIST_TYPES.includes(t)) return RANKED_LIST_LAYOUT_OPTIONS;
   return AGGREGATE_STAT_LAYOUT_OPTIONS;

@@ -17,6 +17,8 @@ import { buildTopLanguagesCard } from "../../cards/topLanguagesCard";
 import { buildGithubReposCard } from "../../cards/githubReposCard";
 import { buildGithubActivityCard } from "../../cards/githubActivityCard";
 import { buildRepoContributionsCard } from "../../cards/repoContributionsCard";
+import { buildGithubTradingCard } from "../../cards/githubTradingCard";
+import { buildRepoPassportCard } from "../../cards/repoPassportCard";
 import { buildErrorCard } from "../../cards/errorCard";
 import { toDataUri } from "../../image";
 import { renderRankedListLayout, type RankedItem, type RankedListGenericLayout } from "../../cards/layouts/rankedList";
@@ -28,7 +30,7 @@ const SINGLE_ITEM_LAYOUTS = ["full", "compact", "terminal", "badge", "portrait",
 const REPO_NAME_PATTERN = /^[\w.-]+\/[\w.-]+$/;
 
 const statsConfigSchema = z.object({
-  layout: z.enum(["full", "terminal", "radial", "badge", "tiles", "portrait"]).default("full"),
+  layout: z.enum(["full", "terminal", "radial", "badge", "tiles", "portrait", "trading-card"]).default("full"),
 });
 
 const languagesConfigSchema = z.object({
@@ -45,7 +47,7 @@ const activityConfigSchema = z.object({
 
 const repoContributionsConfigSchema = z.object({
   repo: z.string().regex(REPO_NAME_PATTERN, "Use owner/repo format"),
-  layout: z.enum(SINGLE_ITEM_LAYOUTS).default("full"),
+  layout: z.enum([...SINGLE_ITEM_LAYOUTS, "passport"]).default("full"),
 });
 
 export const githubCardTypes: CardTypeDef[] = [
@@ -77,6 +79,11 @@ async function renderCard(args: {
   if (args.type === "github-stats") {
     const parsed = statsConfigSchema.parse(args.config ?? {});
     if (parsed.layout === "full") return buildGithubStatsCard(profile, args.theme);
+
+    if (parsed.layout === "trading-card") {
+      const [repos, avatar] = await Promise.all([getGithubRepos(profile.login, 100), toDataUri(profile.avatarUrl)]);
+      return buildGithubTradingCard(profile, repos, avatar, args.theme);
+    }
 
     const years = Math.max(0, (Date.now() - new Date(profile.createdAt).getTime()) / (365.25 * 24 * 3600 * 1000));
     const metrics = [
@@ -143,6 +150,10 @@ async function renderCard(args: {
     };
 
     if (parsed.layout === "full") return buildRepoContributionsCard(data, art, args.theme);
+    if (parsed.layout === "passport") {
+      const holderAvatar = await toDataUri(profile.avatarUrl);
+      return buildRepoPassportCard(data, holderAvatar, profile.login, args.theme);
+    }
     return renderSingleItemLayout(
       parsed.layout as SingleItemGenericLayout,
       {
