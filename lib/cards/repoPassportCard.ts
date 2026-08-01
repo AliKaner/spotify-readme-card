@@ -1,6 +1,6 @@
 import type { Theme } from "../themes";
 import { escapeXml, truncateText } from "../text";
-import { appGlyph, thumbShadowFilter } from "./shared";
+import { appGlyph, thumbShadowFilter, barcode } from "./shared";
 import type { RepoContributionsData } from "./repoContributionsCard";
 
 const WIDTH = 480;
@@ -10,23 +10,6 @@ const PHOTO_SIZE = 96;
 const PHOTO_X = PADDING;
 const PHOTO_Y = 64;
 const FIELD_X = PHOTO_X + PHOTO_SIZE + 26;
-
-function barcode(seed: string, x: number, y: number, width: number, height: number, color: string): string {
-  let bars = "";
-  let cursor = x;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-
-  while (cursor < x + width) {
-    hash = (hash * 1103515245 + 12345) >>> 0;
-    const barWidth = 1 + (hash % 3);
-    if (hash % 5 !== 0) {
-      bars += `<rect x="${cursor}" y="${y}" width="${barWidth}" height="${height}" fill="${color}" />`;
-    }
-    cursor += barWidth + 1.5;
-  }
-  return bars;
-}
 
 function stamp(cx: number, cy: number, color: string): string {
   return `<g transform="translate(${cx}, ${cy}) rotate(-12)" opacity="0.85">

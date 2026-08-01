@@ -131,14 +131,22 @@ const GITHUB_STATS_LAYOUT_OPTIONS = [
   { id: "tiles", label: "Tiles" },
   { id: "portrait", label: "Portrait" },
   { id: "trading-card", label: "Trading Card" },
+  { id: "rpg-sheet", label: "RPG Character Sheet" },
+  { id: "report-card", label: "Report Card" },
 ];
 
-const REPO_CONTRIBUTIONS_LAYOUT_OPTIONS = [...SINGLE_ITEM_LAYOUT_OPTIONS, { id: "passport", label: "Passport" }];
+const REPO_CONTRIBUTIONS_LAYOUT_OPTIONS = [
+  ...SINGLE_ITEM_LAYOUT_OPTIONS,
+  { id: "passport", label: "Passport" },
+  { id: "wanted-poster", label: "Wanted Poster" },
+];
+const TOP_GENRES_LAYOUT_OPTIONS = [...AGGREGATE_STAT_LAYOUT_OPTIONS, { id: "boarding-pass", label: "Boarding Pass" }];
 
 function layoutOptionsFor(t: CardType): { id: string; label: string }[] {
   if (t === "gallery") return GALLERY_LAYOUT_OPTIONS;
   if (t === "github-stats") return GITHUB_STATS_LAYOUT_OPTIONS;
   if (t === "repo-contributions") return REPO_CONTRIBUTIONS_LAYOUT_OPTIONS;
+  if (t === "top-genres") return TOP_GENRES_LAYOUT_OPTIONS;
   if (SINGLE_ITEM_TYPES.includes(t)) return SINGLE_ITEM_LAYOUT_OPTIONS;
   if (RANKED_LIST_TYPES.includes(t)) return RANKED_LIST_LAYOUT_OPTIONS;
   return AGGREGATE_STAT_LAYOUT_OPTIONS;

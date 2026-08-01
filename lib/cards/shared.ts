@@ -84,3 +84,21 @@ export function appBrandFooter(theme: Theme, x: number, y: number): string {
     <text x="18" y="12" class="brand">README CARDS</text>
   </g>`;
 }
+
+/** Deterministic decorative barcode (not a real scannable code) for ticket/document-styled cards. */
+export function barcode(seed: string, x: number, y: number, width: number, height: number, color: string): string {
+  let bars = "";
+  let cursor = x;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+
+  while (cursor < x + width) {
+    hash = (hash * 1103515245 + 12345) >>> 0;
+    const barWidth = 1 + (hash % 3);
+    if (hash % 5 !== 0) {
+      bars += `<rect x="${cursor}" y="${y}" width="${barWidth}" height="${height}" fill="${color}" />`;
+    }
+    cursor += barWidth + 1.5;
+  }
+  return bars;
+}

@@ -23,6 +23,7 @@ import { buildTopTracksCard, buildTopTracksGridCard, type TopTrackWithArt } from
 import { buildTopArtistsCard, type TopArtistWithArt } from "../../cards/topArtistsCard";
 import { buildRecentlyPlayedCard, type RecentTrackWithArt } from "../../cards/recentlyPlayedCard";
 import { buildTopGenresCard } from "../../cards/topGenresCard";
+import { buildGenresBoardingPassCard } from "../../cards/genresBoardingPassCard";
 import { buildSonicProfileCard } from "../../cards/sonicProfileCard";
 import { buildFeaturedTrackCard } from "../../cards/featuredTrackCard";
 import { buildFeaturedArtistCard } from "../../cards/featuredArtistCard";
@@ -61,7 +62,7 @@ const recentlyPlayedConfigSchema = z.object({
 
 const topGenresConfigSchema = z.object({
   time_range: z.enum(["short_term", "medium_term", "long_term"]).default("short_term"),
-  layout: z.enum(AGGREGATE_STAT_LAYOUTS).default("bars"),
+  layout: z.enum([...AGGREGATE_STAT_LAYOUTS, "boarding-pass"]).default("bars"),
 });
 
 const sonicProfileConfigSchema = z.object({
@@ -205,6 +206,7 @@ async function renderCard(args: {
     const artists = await getTopArtists(accessToken, parsed.time_range, 50);
     const genres = computeTopGenres(artists, 5);
     if (parsed.layout === "bars") return buildTopGenresCard(genres, theme);
+    if (parsed.layout === "boarding-pass") return buildGenresBoardingPassCard(genres, theme);
     const maxCount = Math.max(1, ...genres.map((g) => g.count));
     const metrics = genres.map((g) => ({ label: g.genre, value: g.count / maxCount }));
     return renderAggregateStatLayout(parsed.layout as AggregateStatGenericLayout, { metrics }, theme, "Top Genres");
