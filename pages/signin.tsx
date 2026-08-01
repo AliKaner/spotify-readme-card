@@ -17,7 +17,7 @@ export default function SignIn() {
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "48px 20px", textAlign: "center" }}>
       <h1 style={{ fontSize: 22, marginBottom: 24 }}>Sign in</h1>
       <button
-        onClick={() => signIn("github", { redirectTo: "/dashboard" })}
+        onClick={() => signIn("github", { redirectTo: "/signin" })}
         style={{
           padding: "12px 22px",
           background: "#1db954",
